@@ -91,7 +91,7 @@ function drawFurnitureCell(
   ctx.fillRect(x, y + cellSize - 4, cellSize, 4)
 }
 
-// 家具タイプ別アイコンを俯瞰セルに描画
+// 家具タイプ別アイコンをBEVセルに描画
 function drawFurnitureIcon(
   ctx: CanvasRenderingContext2D,
   col: number,

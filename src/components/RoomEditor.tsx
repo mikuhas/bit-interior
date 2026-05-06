@@ -19,7 +19,8 @@ interface Props {
 export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWidth, initialHeight }: Props) {
   const {
     room, setCell, placeFurniture, moveFurniture, removeFurniture,
-    updateFurnitureColor, updateFurnitureZ, updateFurnitureScale, loadRoom,
+    updateFurnitureColor, updateFurnitureZ, updateFurnitureScale,
+    updateRoomAppearance, resizeRoom, loadRoom,
   } = useRoom(initialWidth, initialHeight)
 
   const [viewMode, setViewMode] = useState<ViewMode>('topdown')
@@ -30,9 +31,13 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
   const [saveExists, setSaveExists] = useState(() => hasSaveData())
   const [saveFlash, setSaveFlash] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  // ビット設定の一時編集値
+  const [darkMode, setDarkMode] = useState(true)
   const [editBitSize, setEditBitSize] = useState(bitSettings.size)
   const [editBitUnit, setEditBitUnit] = useState<BitUnit>(bitSettings.unit)
+  const [editWallHeight, setEditWallHeight] = useState(3)
+  const [editWallColor, setEditWallColor] = useState('#2d3050')
+  const [editRoomW, setEditRoomW] = useState(initialWidth)
+  const [editRoomH, setEditRoomH] = useState(initialHeight)
 
   const handleRotate = useCallback(() => {
     setFurnitureRotation(prev => ((prev + 1) % 4) as 0 | 1 | 2 | 3)
@@ -115,13 +120,26 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
     } catch { /* silent */ }
   }, [loadRoom, onBitSettingsChange])
 
+  const handleOpenSettings = useCallback(() => {
+    setEditWallHeight(room.wallHeight ?? 3)
+    setEditWallColor(room.wallColor ?? '#2d3050')
+    setEditRoomW(room.width)
+    setEditRoomH(room.height)
+    setShowSettings(s => !s)
+  }, [room.wallHeight, room.wallColor, room.width, room.height])
+
   const handleApplySettings = useCallback(() => {
     onBitSettingsChange({ size: editBitSize, unit: editBitUnit })
+    updateRoomAppearance(editWallHeight, editWallColor)
+    if (editRoomW !== room.width || editRoomH !== room.height) {
+      resizeRoom(editRoomW, editRoomH)
+    }
     setShowSettings(false)
-  }, [editBitSize, editBitUnit, onBitSettingsChange])
+  }, [editBitSize, editBitUnit, editWallHeight, editWallColor, editRoomW, editRoomH,
+      room.width, room.height, onBitSettingsChange, updateRoomAppearance, resizeRoom])
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#0f0f23', overflow: 'hidden' }}>
+    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: darkMode ? '#0f0f23' : '#c8d4e4', overflow: 'hidden' }}>
       <Toolbar
         viewMode={viewMode} setViewMode={setViewMode}
         tool={tool} setTool={handleSetTool}
@@ -129,7 +147,8 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
         selectedInstanceId={selectedInstanceId} onDeleteSelected={handleDeleteSelected}
         bitSettings={bitSettings} roomSize={{ width: room.width, height: room.height }}
         onSave={handleSave} onLoad={handleLoad} onExport={handleExport} onImport={handleImport}
-        hasSave={saveExists} onOpenSettings={() => setShowSettings(s => !s)}
+        hasSave={saveExists} onOpenSettings={handleOpenSettings}
+        darkMode={darkMode} onToggleDarkMode={() => setDarkMode(d => !d)}
       />
 
       {/* ビット設定パネル */}
@@ -137,7 +156,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
         <div style={{
           position: 'fixed', top: 55, right: 16, zIndex: 200,
           background: '#16162a', border: '2px solid #4a4e69',
-          padding: '12px 16px', minWidth: 200,
+          padding: '12px 16px', minWidth: 220,
           fontFamily: "'Press Start 2P', monospace",
         }}>
           <div style={{ fontSize: 8, color: '#cc88ff', marginBottom: 10, letterSpacing: 1 }}>BIT SETTINGS</div>
@@ -173,6 +192,39 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
 
           <div style={{ fontSize: 6, color: '#7878aa', marginBottom: 8 }}>
             プレビュー: 1bit = {editBitSize}{editBitUnit}
+          </div>
+
+          <div style={{ borderTop: '1px solid #2a2a4a', marginBottom: 8 }} />
+          <div style={{ fontSize: 8, color: '#44aaff', marginBottom: 8, letterSpacing: 1 }}>ROOM</div>
+
+          <div style={{ fontSize: 6, color: '#7878aa', marginBottom: 4 }}>サイズ (bit)</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            {([['W', editRoomW, setEditRoomW], ['H', editRoomH, setEditRoomH]] as [string, number, (v: number) => void][]).map(([label, val, set]) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontSize: 6, color: '#7878aa' }}>{label}:</span>
+                <button onClick={() => set(Math.max(2, val - 1))} style={{ width: 18, height: 18, background: '#1a1a3a', border: '2px solid #4a4e69', color: '#e0e0ff', fontFamily: 'inherit', fontSize: 10, cursor: 'pointer', padding: 0 }}>-</button>
+                <span style={{ fontSize: 8, color: '#e0e0ff', minWidth: 22, textAlign: 'center' }}>{val}</span>
+                <button onClick={() => set(Math.min(60, val + 1))} style={{ width: 18, height: 18, background: '#1a1a3a', border: '2px solid #4a4e69', color: '#e0e0ff', fontFamily: 'inherit', fontSize: 10, cursor: 'pointer', padding: 0 }}>+</button>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 6, color: '#7878aa', marginBottom: 4 }}>壁の高さ: {editWallHeight} bit</div>
+          <input
+            type="range" min={1} max={8} step={1}
+            value={editWallHeight}
+            onChange={e => setEditWallHeight(parseInt(e.target.value))}
+            style={{ width: '100%', accentColor: '#44aaff', marginBottom: 10 }}
+          />
+
+          <div style={{ fontSize: 6, color: '#7878aa', marginBottom: 4 }}>壁の色</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <input
+              type="color" value={editWallColor}
+              onChange={e => setEditWallColor(e.target.value)}
+              style={{ width: 36, height: 24, padding: 0, border: '2px solid #4a4e69', cursor: 'pointer', background: 'none' }}
+            />
+            <span style={{ fontSize: 6, color: '#5a5a8a', fontFamily: 'monospace' }}>{editWallColor.toUpperCase()}</span>
           </div>
 
           <div style={{ display: 'flex', gap: 6 }}>
@@ -231,7 +283,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
           flex: 1, overflow: 'auto', display: 'flex',
           alignItems: 'flex-start',
           justifyContent: viewMode === 'isometric' ? 'center' : 'flex-start',
-          padding: 16, background: '#080912',
+          padding: 16, background: darkMode ? '#080912' : '#b8c8dc',
         }}>
           {viewMode === 'topdown' ? (
             <TopDownCanvas
@@ -247,7 +299,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
               onRotate={handleRotate}
             />
           ) : (
-            <IsometricCanvas room={room} />
+            <IsometricCanvas room={room} darkMode={darkMode} />
           )}
         </div>
       </div>

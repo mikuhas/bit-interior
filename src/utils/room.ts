@@ -96,5 +96,5 @@ export function createInitialRoom(width: number, height: number): RoomState {
     }
     cells.push(row)
   }
-  return { width, height, cells, furniture: [] }
+  return { width, height, wallHeight: 3, wallColor: '#2d3050', cells, furniture: [] }
 }

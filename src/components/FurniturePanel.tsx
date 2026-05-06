@@ -108,25 +108,45 @@ export default function FurniturePanel({
             />
           </div>
 
-          {/* サイズスライダー */}
+          {/* サイズ */}
           <div style={{ padding: '8px 10px', borderBottom: '1px solid #2a2a4a' }}>
             <div style={{ fontSize: 7, color: '#ff8844', letterSpacing: 1, marginBottom: 6 }}>SIZE</div>
-
-            <div style={labelStyle}>幅 (W): ×{currentScaleW}</div>
-            <input
-              type="range" min={1} max={4} step={1}
-              value={currentScaleW}
-              onChange={e => onScaleChange(selectedInstanceId!, parseInt(e.target.value), currentScaleH)}
-              style={sliderStyle}
-            />
-
-            <div style={{ ...labelStyle, marginTop: 4 }}>奥行 (H): ×{currentScaleH}</div>
-            <input
-              type="range" min={1} max={4} step={1}
-              value={currentScaleH}
-              onChange={e => onScaleChange(selectedInstanceId!, currentScaleW, parseInt(e.target.value))}
-              style={sliderStyle}
-            />
+            {(() => {
+              const baseCols = selectedTemplate?.shape[0]?.length ?? 1
+              const baseRows = selectedTemplate?.shape.length ?? 1
+              const actualW = currentScaleW * baseCols
+              const actualH = currentScaleH * baseRows
+              const pmStyle: React.CSSProperties = {
+                width: 18, height: 18, background: '#1a1a3a', border: '2px solid #4a4e69',
+                color: '#e0e0ff', fontFamily: 'inherit', fontSize: 10, cursor: 'pointer', padding: 0,
+              }
+              return (
+                <>
+                  <div style={labelStyle}>幅 (W): {actualW} bit</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                    <button style={pmStyle} onClick={() => onScaleChange(selectedInstanceId!, Math.max(1, currentScaleW - 1), currentScaleH)}>-</button>
+                    <input
+                      type="range" min={1} max={10} step={1}
+                      value={currentScaleW}
+                      onChange={e => onScaleChange(selectedInstanceId!, parseInt(e.target.value), currentScaleH)}
+                      style={{ ...sliderStyle, flex: 1 }}
+                    />
+                    <button style={pmStyle} onClick={() => onScaleChange(selectedInstanceId!, Math.min(10, currentScaleW + 1), currentScaleH)}>+</button>
+                  </div>
+                  <div style={{ ...labelStyle, marginTop: 2 }}>奥行 (H): {actualH} bit</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button style={pmStyle} onClick={() => onScaleChange(selectedInstanceId!, currentScaleW, Math.max(1, currentScaleH - 1))}>-</button>
+                    <input
+                      type="range" min={1} max={10} step={1}
+                      value={currentScaleH}
+                      onChange={e => onScaleChange(selectedInstanceId!, currentScaleW, parseInt(e.target.value))}
+                      style={{ ...sliderStyle, flex: 1 }}
+                    />
+                    <button style={pmStyle} onClick={() => onScaleChange(selectedInstanceId!, currentScaleW, Math.min(10, currentScaleH + 1))}>+</button>
+                  </div>
+                </>
+              )
+            })()}
           </div>
 
           {/* カラーピッカー */}

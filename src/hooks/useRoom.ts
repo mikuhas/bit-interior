@@ -61,19 +61,41 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
     }))
   }, [])
 
+  const resizeRoom = useCallback((newWidth: number, newHeight: number) => {
+    setRoom(prev => {
+      const w = Math.max(2, newWidth)
+      const h = Math.max(2, newHeight)
+      const newCells: CellType[][] = Array.from({ length: h }, (_, r) =>
+        Array.from({ length: w }, (_, c) =>
+          r < prev.height && c < prev.width ? prev.cells[r][c] : 'empty'
+        )
+      )
+      const furniture = prev.furniture.filter(f => f.y < h && f.x < w)
+      return { ...prev, width: w, height: h, cells: newCells, furniture }
+    })
+  }, [])
+
   const resetRoom = useCallback((width: number, height: number) => {
     setRoom(createInitialRoom(width, height))
   }, [])
 
+  const updateRoomAppearance = useCallback((wallHeight: number, wallColor: string) => {
+    setRoom(prev => ({ ...prev, wallHeight, wallColor }))
+  }, [])
+
   const loadRoom = useCallback((newRoom: RoomState) => {
-    // 古いセーブデータに z/scaleW/scaleH がない場合のデフォルト補完
     const furniture = newRoom.furniture.map(f => ({
       ...f,
       z: f.z ?? 0,
       scaleW: f.scaleW ?? 1,
       scaleH: f.scaleH ?? 1,
     }))
-    setRoom({ ...newRoom, furniture })
+    setRoom({
+      ...newRoom,
+      furniture,
+      wallHeight: newRoom.wallHeight ?? 3,
+      wallColor: newRoom.wallColor ?? '#2d3050',
+    })
   }, [])
 
   return {
@@ -85,6 +107,8 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
     updateFurnitureColor,
     updateFurnitureZ,
     updateFurnitureScale,
+    updateRoomAppearance,
+    resizeRoom,
     resetRoom,
     loadRoom,
   }

@@ -18,6 +18,8 @@ interface Props {
   onImport: (file: File) => void
   hasSave: boolean
   onOpenSettings: () => void
+  darkMode: boolean
+  onToggleDarkMode: () => void
 }
 
 const TOOLS: { id: EditTool; label: string }[] = [
@@ -47,6 +49,8 @@ export default function Toolbar({
   onImport,
   hasSave,
   onOpenSettings,
+  darkMode,
+  onToggleDarkMode,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -86,9 +90,9 @@ export default function Toolbar({
         <button
           className={`pixel-btn ${viewMode === 'topdown' ? 'view-active' : ''}`}
           onClick={() => setViewMode('topdown')}
-          title="俯瞰ビュー"
+          title="BEVビュー"
         >
-          俯瞰
+          BEV
         </button>
         <button
           className={`pixel-btn ${viewMode === 'isometric' ? 'view-active' : ''}`}
@@ -99,7 +103,7 @@ export default function Toolbar({
         </button>
       </div>
 
-      {/* 編集ツール (俯瞰モードのみ) */}
+      {/* 編集ツール (BEVモードのみ) */}
       {viewMode === 'topdown' && (
         <>
           <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
@@ -196,6 +200,18 @@ export default function Toolbar({
           }}
         />
       </div>
+
+      <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
+
+      {/* Dark/Light トグル */}
+      <button
+        className="pixel-btn"
+        onClick={onToggleDarkMode}
+        title="Dark/Light切替"
+        style={{ color: darkMode ? '#ffcc44' : '#4488ff', borderColor: darkMode ? '#aa8800' : '#2255aa' }}
+      >
+        {darkMode ? 'DARK' : 'LIGHT'}
+      </button>
 
       <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
 

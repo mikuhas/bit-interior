@@ -38,6 +38,8 @@ export interface PlacedFurniture {
 export interface RoomState {
   width: number
   height: number
-  cells: CellType[][]   // [row][col]
+  wallHeight: number   // bits, default 3
+  wallColor: string    // hex, default '#2d3050'
+  cells: CellType[][]  // [row][col]
   furniture: PlacedFurniture[]
 }

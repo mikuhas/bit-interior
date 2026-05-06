@@ -5,10 +5,8 @@ import { rotateShape, expandShape } from '../utils/room'
 
 const TILE_W = 64
 const TILE_H = 32
-const WALL_H = 36
-const Z_PX = 14   // 1bit高さあたりのピクセル数
+const Z_PX = 14
 
-// --- Color utilities ---
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '')
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]
@@ -27,7 +25,6 @@ function mix(hex1: string, hex2: string, t: number): string {
   return rgbToHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t)
 }
 
-// アイソメUVマッピング: N=(0,0), E=(1,0), S=(1,1), W=(0,1)
 function isoUV(x: number, y: number, h: number, u: number, v: number): [number, number] {
   return [x + (u - v) * (TILE_W / 2), y - h + (u + v) * (TILE_H / 2)]
 }
@@ -46,7 +43,7 @@ function isoRect(
   if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 0.5; ctx.stroke() }
 }
 
-interface Props { room: RoomState }
+interface Props { room: RoomState; darkMode?: boolean }
 
 type CellInfo = {
   color: string; topColor: string; height: number; z: number
@@ -54,7 +51,6 @@ type CellInfo = {
   localRow: number; localCol: number; shapeRows: number; shapeCols: number
 }
 
-// 家具固有デコレーション
 function drawDecoration(ctx: CanvasRenderingContext2D, fc: CellInfo, x: number, y: number, cubeH: number) {
   const { templateId, localRow, shapeCols, color, topColor } = fc
   switch (templateId) {
@@ -169,11 +165,12 @@ function drawDecoration(ctx: CanvasRenderingContext2D, fc: CellInfo, x: number, 
   }
 }
 
-export default function IsometricCanvas({ room }: Props) {
+export default function IsometricCanvas({ room, darkMode = true }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const wallH = (room.wallHeight ?? 3) * Z_PX
   const totalCells = room.width + room.height
   const canvasW = totalCells * TILE_W / 2 + TILE_W
-  const canvasH = totalCells * TILE_H / 2 + WALL_H * 4 + TILE_H + 120
+  const canvasH = totalCells * TILE_H / 2 + wallH * 4 + TILE_H + 120
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -181,18 +178,21 @@ export default function IsometricCanvas({ room }: Props) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    const wallColor = room.wallColor ?? '#2d3050'
     const offsetX = room.height * TILE_W / 2 + TILE_W / 2
-    const offsetY = WALL_H * 2 + TILE_H + 60
+    const offsetY = wallH * 2 + TILE_H + 60
 
+    // 整数化して sub-pixel ずれを排除 → 接地面ピクセル完全一致
     const toScreen = (col: number, row: number) => ({
-      x: offsetX + (col - row) * TILE_W / 2,
-      y: offsetY + (col + row) * TILE_H / 2,
+      x: Math.round(offsetX + (col - row) * TILE_W / 2),
+      y: Math.round(offsetY + (col + row) * TILE_H / 2),
     })
 
-    ctx.fillStyle = '#080912'
+    // Background
+    ctx.fillStyle = darkMode ? '#080912' : '#dce8f4'
     ctx.fillRect(0, 0, canvasW, canvasH)
 
-    // ---- 家具セルマップ構築 ----
+    // 家具セルマップ構築
     type CellEntry = CellInfo & { screenZOff: number }
     const furnitureCellMap = new Map<string, CellEntry>()
 
@@ -201,7 +201,7 @@ export default function IsometricCanvas({ room }: Props) {
       if (!tmpl) continue
       const sw = pf.scaleW ?? 1
       const sh = pf.scaleH ?? 1
-      const z = pf.z ?? 0
+      const z = Math.max(0, pf.z ?? 0)   // Rule 1: Z >= 0 を強制
       const rotated = rotateShape(tmpl.shape, pf.rotation)
       const shape = expandShape(rotated, sw, sh)
       const shapeRows = shape.length
@@ -211,62 +211,77 @@ export default function IsometricCanvas({ room }: Props) {
 
       for (let r = 0; r < shape.length; r++) {
         for (let c = 0; c < shape[r].length; c++) {
-          if (shape[r][c]) {
-            furnitureCellMap.set(`${pf.y + r},${pf.x + c}`, {
-              color: effectiveColor,
-              topColor: effectiveTopColor,
-              height: tmpl.height,
-              z,
-              templateId: tmpl.id,
-              instanceId: pf.instanceId,
-              localRow: r,
-              localCol: c,
-              shapeRows,
-              shapeCols,
-              screenZOff: z * Z_PX,
-            })
-          }
+          if (!shape[r][c]) continue
+          const gr = pf.y + r; const gc = pf.x + c
+          // Rule 1: 境界外・壁セルをスキップ
+          if (gr < 0 || gr >= room.height || gc < 0 || gc >= room.width) continue
+          if (room.cells[gr][gc] !== 'floor') continue
+          furnitureCellMap.set(`${gr},${gc}`, {
+            color: effectiveColor,
+            topColor: effectiveTopColor,
+            height: tmpl.height,
+            z,
+            templateId: tmpl.id,
+            instanceId: pf.instanceId,
+            localRow: r,
+            localCol: c,
+            shapeRows,
+            shapeCols,
+            screenZOff: z * Z_PX,
+          })
         }
       }
     }
 
-    // ---- ソート: row+col が同じ場合は z で昇順 ----
+    // Rule 2: depth sort — 奥(row+col小)から手前、同深度は floor→furniture→wall 順
     const allCells: Array<{ row: number; col: number }> = []
     for (let r = 0; r < room.height; r++)
       for (let c = 0; c < room.width; c++)
         allCells.push({ row: r, col: c })
 
-    const getFcZ = (r: number, c: number) => furnitureCellMap.get(`${r},${c}`)?.z ?? 0
     allCells.sort((a, b) => {
-      const ka = (a.row + a.col) * 100 + getFcZ(a.row, a.col)
-      const kb = (b.row + b.col) * 100 + getFcZ(b.row, b.col)
-      return ka - kb
+      const depthA = a.row + a.col
+      const depthB = b.row + b.col
+      if (depthA !== depthB) return depthA - depthB
+      // 同深度: wall は floor+furniture より後（壁が手前オブジェクトを遮蔽）
+      const wallA = room.cells[a.row][a.col] === 'wall' ? 1 : 0
+      const wallB = room.cells[b.row][b.col] === 'wall' ? 1 : 0
+      if (wallA !== wallB) return wallA - wallB
+      return a.col - b.col
     })
 
-    // ---- 描画関数群 ----
+    // Floor tile
     const drawFloorTile = (col: number, row: number) => {
       const { x, y } = toScreen(col, row)
       ctx.beginPath()
       ctx.moveTo(x, y); ctx.lineTo(x+TILE_W/2, y+TILE_H/2); ctx.lineTo(x, y+TILE_H); ctx.lineTo(x-TILE_W/2, y+TILE_H/2)
-      ctx.closePath(); ctx.fillStyle='#1e3055'; ctx.fill()
-      ctx.strokeStyle='#0d1535'; ctx.lineWidth=1; ctx.stroke()
+      ctx.closePath()
+      ctx.fillStyle = darkMode ? '#1e3055' : '#8898b8'
+      ctx.fill()
+      ctx.strokeStyle = darkMode ? '#0d1535' : '#6070a0'
+      ctx.lineWidth = 1; ctx.stroke()
     }
 
+    // Wall cube using wallColor
     const drawWallCube = (col: number, row: number) => {
       const { x, y } = toScreen(col, row)
-      const h = WALL_H
+      const h = wallH
+      const wLeft  = shade(wallColor, 0.82)
+      const wRight = wallColor
+      const wTop   = shade(wallColor, 1.55)
+      const wStroke = shade(wallColor, 0.50)
       // left
       ctx.beginPath()
       ctx.moveTo(x-TILE_W/2,y+TILE_H/2); ctx.lineTo(x,y+TILE_H); ctx.lineTo(x,y+TILE_H+h); ctx.lineTo(x-TILE_W/2,y+TILE_H/2+h)
-      ctx.closePath(); ctx.fillStyle='#252840'; ctx.fill(); ctx.strokeStyle='#1a1c2e'; ctx.lineWidth=1; ctx.stroke()
+      ctx.closePath(); ctx.fillStyle=wLeft; ctx.fill(); ctx.strokeStyle=wStroke; ctx.lineWidth=1; ctx.stroke()
       // right
       ctx.beginPath()
       ctx.moveTo(x+TILE_W/2,y+TILE_H/2); ctx.lineTo(x,y+TILE_H); ctx.lineTo(x,y+TILE_H+h); ctx.lineTo(x+TILE_W/2,y+TILE_H/2+h)
-      ctx.closePath(); ctx.fillStyle='#2d3050'; ctx.fill(); ctx.strokeStyle='#1a1c2e'; ctx.lineWidth=1; ctx.stroke()
+      ctx.closePath(); ctx.fillStyle=wRight; ctx.fill(); ctx.strokeStyle=wStroke; ctx.lineWidth=1; ctx.stroke()
       // top
       ctx.beginPath()
       ctx.moveTo(x,y-h); ctx.lineTo(x+TILE_W/2,y+TILE_H/2-h); ctx.lineTo(x,y+TILE_H-h); ctx.lineTo(x-TILE_W/2,y+TILE_H/2-h)
-      ctx.closePath(); ctx.fillStyle='#4a4e69'; ctx.fill(); ctx.strokeStyle='#5a5e80'; ctx.lineWidth=1; ctx.stroke()
+      ctx.closePath(); ctx.fillStyle=wTop; ctx.fill(); ctx.strokeStyle=shade(wallColor, 1.8); ctx.lineWidth=1; ctx.stroke()
     }
 
     const isSameInstance = (row: number, col: number, instanceId: string): boolean =>
@@ -274,22 +289,21 @@ export default function IsometricCanvas({ room }: Props) {
 
     const drawFurnitureCube = (col: number, row: number, fc: CellEntry) => {
       const { x, y } = toScreen(col, row)
-      const cubeH = fc.height * 12
-      const zOff = fc.screenZOff    // Z軸オフセット: 上方向 (y が減る)
+      const cubeH = fc.height * 18   // 18px/bit → 立体感向上
+      const zOff = fc.screenZOff
 
-      // y座標をZOff分上にシフト
       const baseY = y - zOff
 
-      const topFace  = shade(fc.color, 1.35)
-      const leftFace = shade(fc.color, 0.80)
-      const rightFace= shade(fc.color, 0.54)
-      const outerEdge= shade(fc.color, 0.28)
+      // 強めのコントラストで面を分離
+      const topFace   = shade(fc.color, 1.60)
+      const leftFace  = shade(fc.color, 0.70)
+      const rightFace = shade(fc.color, 0.38)
+      const outerEdge = shade(fc.color, 0.22)
 
-      // 隣接インスタンス判定
       const leftInt  = isSameInstance(row+1, col, fc.instanceId)
       const rightInt = isSameInstance(row, col+1, fc.instanceId)
 
-      // --- Left face (SW) ---
+      // Left face (SW)
       ctx.beginPath()
       ctx.moveTo(x-TILE_W/2, baseY+TILE_H/2)
       ctx.lineTo(x,           baseY+TILE_H)
@@ -298,9 +312,9 @@ export default function IsometricCanvas({ room }: Props) {
       ctx.closePath()
       ctx.fillStyle = leftFace; ctx.fill()
       ctx.strokeStyle = leftInt ? shade(leftFace, 0.82) : outerEdge
-      ctx.lineWidth  = leftInt ? 0.5 : 0.9; ctx.stroke()
+      ctx.lineWidth = leftInt ? 0.5 : 1.2; ctx.stroke()
 
-      // --- Right face (SE) ---
+      // Right face (SE)
       ctx.beginPath()
       ctx.moveTo(x+TILE_W/2, baseY+TILE_H/2)
       ctx.lineTo(x,           baseY+TILE_H)
@@ -309,10 +323,16 @@ export default function IsometricCanvas({ room }: Props) {
       ctx.closePath()
       ctx.fillStyle = rightFace; ctx.fill()
       ctx.strokeStyle = rightInt ? shade(rightFace, 0.82) : outerEdge
-      ctx.lineWidth  = rightInt ? 0.5 : 0.9; ctx.stroke()
+      ctx.lineWidth = rightInt ? 0.5 : 1.2; ctx.stroke()
 
-      // --- Top face ---
-      // Fill のみ (outer edge は後で個別に描く)
+      // Bottom edge shadow
+      ctx.beginPath()
+      ctx.moveTo(x-TILE_W/2, baseY+TILE_H/2+cubeH)
+      ctx.lineTo(x,           baseY+TILE_H+cubeH)
+      ctx.lineTo(x+TILE_W/2, baseY+TILE_H/2+cubeH)
+      ctx.strokeStyle = shade(fc.color, 0.12); ctx.lineWidth = 2; ctx.stroke()
+
+      // Top face
       ctx.beginPath()
       ctx.moveTo(x,           baseY-cubeH)
       ctx.lineTo(x+TILE_W/2, baseY+TILE_H/2-cubeH)
@@ -320,51 +340,41 @@ export default function IsometricCanvas({ room }: Props) {
       ctx.lineTo(x-TILE_W/2, baseY+TILE_H/2-cubeH)
       ctx.closePath()
       ctx.fillStyle = topFace; ctx.fill()
-
-      // topColor オーバーレイ (素材感)
       if (fc.topColor !== fc.color) {
         ctx.fillStyle = fc.topColor + '70'; ctx.fill()
       }
 
-      // Top face 外周エッジのみ描画 (内部は描かない)
+      // Top face outer edges
       const topY = baseY - cubeH
-      // NW edge: outer if (col-1, row) not same
       if (!isSameInstance(row, col-1, fc.instanceId)) {
         ctx.beginPath()
-        ctx.moveTo(x-TILE_W/2, topY+TILE_H/2)
-        ctx.lineTo(x, topY)
-        ctx.strokeStyle = outerEdge; ctx.lineWidth = 0.9; ctx.stroke()
+        ctx.moveTo(x-TILE_W/2, topY+TILE_H/2); ctx.lineTo(x, topY)
+        ctx.strokeStyle = outerEdge; ctx.lineWidth = 1.2; ctx.stroke()
       }
-      // NE edge: outer if (col, row-1) not same
       if (!isSameInstance(row-1, col, fc.instanceId)) {
         ctx.beginPath()
-        ctx.moveTo(x, topY)
-        ctx.lineTo(x+TILE_W/2, topY+TILE_H/2)
-        ctx.strokeStyle = outerEdge; ctx.lineWidth = 0.9; ctx.stroke()
+        ctx.moveTo(x, topY); ctx.lineTo(x+TILE_W/2, topY+TILE_H/2)
+        ctx.strokeStyle = outerEdge; ctx.lineWidth = 1.2; ctx.stroke()
       }
-      // SE edge: outer if (col+1, row) not same
       if (!rightInt) {
         ctx.beginPath()
-        ctx.moveTo(x+TILE_W/2, topY+TILE_H/2)
-        ctx.lineTo(x, topY+TILE_H)
-        ctx.strokeStyle = outerEdge; ctx.lineWidth = 0.9; ctx.stroke()
+        ctx.moveTo(x+TILE_W/2, topY+TILE_H/2); ctx.lineTo(x, topY+TILE_H)
+        ctx.strokeStyle = outerEdge; ctx.lineWidth = 1.2; ctx.stroke()
       }
-      // SW edge: outer if (col, row+1) not same
       if (!leftInt) {
         ctx.beginPath()
-        ctx.moveTo(x, topY+TILE_H)
-        ctx.lineTo(x-TILE_W/2, topY+TILE_H/2)
-        ctx.strokeStyle = outerEdge; ctx.lineWidth = 0.9; ctx.stroke()
+        ctx.moveTo(x, topY+TILE_H); ctx.lineTo(x-TILE_W/2, topY+TILE_H/2)
+        ctx.strokeStyle = outerEdge; ctx.lineWidth = 1.2; ctx.stroke()
       }
 
-      // 上辺ハイライト (常に)
+      // Top highlight (NW→N→NE)
       ctx.beginPath()
       ctx.moveTo(x-TILE_W/2, topY+TILE_H/2)
       ctx.lineTo(x, topY)
       ctx.lineTo(x+TILE_W/2, topY+TILE_H/2)
-      ctx.strokeStyle = shade(fc.color, 2.0); ctx.lineWidth = 1.2; ctx.stroke()
+      ctx.strokeStyle = shade(fc.color, 2.8); ctx.lineWidth = 1.5; ctx.stroke()
 
-      // Z > 0 なら床への「脚/影」描画
+      // Z > 0: 床への影
       if (fc.z > 0 && !leftInt && !rightInt) {
         const shadowAlpha = Math.min(0.4, fc.z * 0.08)
         ctx.beginPath()
@@ -377,19 +387,31 @@ export default function IsometricCanvas({ room }: Props) {
         ctx.fill()
       }
 
-      // 家具固有デコレーション
-      // baseY を使った x,y をデコレーション関数に渡すため調整
-      const decorCtx = ctx
-      const decorX = x
-      const decorY = baseY
-      drawDecoration(decorCtx, fc, decorX, decorY, cubeH)
+      drawDecoration(ctx, fc, x, baseY, cubeH)
     }
 
-    // ---- セルを順番に描画 ----
+    // Rule 2: Pass 1 — 全床タイルを奥から手前へ描画
     for (const { row, col } of allCells) {
+      if (room.cells[row][col] === 'floor') drawFloorTile(col, row)
+    }
+
+    // Rule 2: Pass 2 — 壁・家具を奥から手前・下から上へ描画
+    // 家具は z でさらにソート（同セルは z 昇順）
+    const objectCells = allCells.filter(({ row, col }) => room.cells[row][col] !== 'empty')
+    // z 昇順の二次ソート（同 depth 内）
+    objectCells.sort((a, b) => {
+      const depthA = a.row + a.col; const depthB = b.row + b.col
+      if (depthA !== depthB) return depthA - depthB
+      const wallA = room.cells[a.row][a.col] === 'wall' ? 1 : 0
+      const wallB = room.cells[b.row][b.col] === 'wall' ? 1 : 0
+      if (wallA !== wallB) return wallA - wallB
+      const zA = furnitureCellMap.get(`${a.row},${a.col}`)?.z ?? 0
+      const zB = furnitureCellMap.get(`${b.row},${b.col}`)?.z ?? 0
+      return zA - zB
+    })
+    for (const { row, col } of objectCells) {
       const cellType = room.cells[row][col]
       if (cellType === 'floor') {
-        drawFloorTile(col, row)
         const fc = furnitureCellMap.get(`${row},${col}`)
         if (fc) drawFurnitureCube(col, row, fc)
       } else if (cellType === 'wall') {
@@ -397,22 +419,18 @@ export default function IsometricCanvas({ room }: Props) {
       }
     }
 
-    // ---- XYZラベル (デバッグ用・右下) ----
+    // 軸ラベル
     ctx.save()
-    const ax = 30; const ay = canvasH - 30
-    const arrowLen = 20
-    // X軸 (右)
+    const ax = 30; const ay = canvasH - 30; const arrowLen = 20
     ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax+arrowLen, ay); ctx.strokeStyle='#ff5555'; ctx.lineWidth=2; ctx.stroke()
     ctx.fillStyle='#ff5555'; ctx.font='9px monospace'; ctx.fillText('X', ax+arrowLen+3, ay+4)
-    // Y軸 (手前)
     ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax-arrowLen*0.7, ay+arrowLen*0.5); ctx.strokeStyle='#55ff55'; ctx.stroke()
     ctx.fillStyle='#55ff55'; ctx.fillText('Y', ax-arrowLen*0.7-12, ay+arrowLen*0.5+4)
-    // Z軸 (上)
     ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax, ay-arrowLen); ctx.strokeStyle='#5555ff'; ctx.stroke()
     ctx.fillStyle='#5555ff'; ctx.fillText('Z', ax+3, ay-arrowLen-3)
     ctx.restore()
 
-  }, [room, canvasW, canvasH])
+  }, [room, canvasW, canvasH, wallH, darkMode])
 
   return (
     <canvas
