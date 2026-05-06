@@ -1,0 +1,178 @@
+import { FurnitureTemplate } from '../types'
+
+// height単位はbit (1bit = 設定サイズ, デフォルト30cm)
+// アイソメ描画: height * 12px
+export const FURNITURE_TEMPLATES: FurnitureTemplate[] = [
+  {
+    id: 'bed-s',
+    nameJa: 'ベッド(S)',
+    emoji: '🛏',
+    shape: [
+      [true, true],
+      [true, true],
+      [true, true],
+    ],
+    color: '#4a6090',
+    topColor: '#e8d8b8',  // マットレス面
+    sideColor: '#2a3a60',
+    height: 1.5,
+  },
+  {
+    id: 'bed-d',
+    nameJa: 'ベッド(D)',
+    emoji: '🛏',
+    shape: [
+      [true, true, true],
+      [true, true, true],
+      [true, true, true],
+    ],
+    color: '#3a5080',
+    topColor: '#e0d0a8',
+    sideColor: '#1e3050',
+    height: 1.5,
+  },
+  {
+    id: 'sofa',
+    nameJa: 'ソファ',
+    emoji: '🛋',
+    shape: [
+      [true, true, true],
+      [true, true, true],
+    ],
+    color: '#6a4828',
+    topColor: '#9a7048',
+    sideColor: '#3e2a14',
+    height: 3.0,
+  },
+  {
+    id: 'desk',
+    nameJa: 'デスク',
+    emoji: '🖥',
+    shape: [
+      [true, true, true],
+      [false, false, true],
+    ],
+    color: '#7a6020',
+    topColor: '#c0a040',
+    sideColor: '#4a3a10',
+    height: 2.5,
+  },
+  {
+    id: 'chair',
+    nameJa: '椅子',
+    emoji: '🪑',
+    shape: [
+      [true],
+      [true],
+    ],
+    color: '#5a3818',
+    topColor: '#8a5828',
+    sideColor: '#38200c',
+    height: 2.5,
+  },
+  {
+    id: 'dining-table',
+    nameJa: 'ダイニングテーブル',
+    emoji: '🪵',
+    shape: [
+      [true, true, true],
+      [true, true, true],
+    ],
+    color: '#8a6820',
+    topColor: '#c09030',
+    sideColor: '#5a4414',
+    height: 2.5,
+  },
+  {
+    id: 'coffee-table',
+    nameJa: 'コーヒーテーブル',
+    emoji: '🫖',
+    shape: [
+      [true, true],
+      [true, true],
+    ],
+    color: '#7a6020',
+    topColor: '#b08830',
+    sideColor: '#4a3a10',
+    height: 1.5,
+  },
+  {
+    id: 'bookshelf',
+    nameJa: '本棚',
+    emoji: '📚',
+    shape: [
+      [true, true, true],
+    ],
+    color: '#5c3c10',
+    topColor: '#7a5418',
+    sideColor: '#3a2408',
+    height: 6.0,
+  },
+  {
+    id: 'dresser',
+    nameJa: 'ワードローブ',
+    emoji: '🗄',
+    shape: [
+      [true, true],
+    ],
+    color: '#4a3408',
+    topColor: '#6c5018',
+    sideColor: '#2e2004',
+    height: 6.5,
+  },
+  {
+    id: 'tv-stand',
+    nameJa: 'テレビ台',
+    emoji: '📺',
+    shape: [
+      [true, true, true],
+    ],
+    color: '#181820',
+    topColor: '#282830',
+    sideColor: '#0c0c14',
+    height: 1.5,
+  },
+  {
+    id: 'plant',
+    nameJa: '観葉植物',
+    emoji: '🪴',
+    shape: [
+      [true],
+    ],
+    color: '#1e5c18',
+    topColor: '#2e8020',
+    sideColor: '#12380e',
+    height: 3.5,
+  },
+  {
+    id: 'bathtub',
+    nameJa: 'バスタブ',
+    emoji: '🛁',
+    shape: [
+      [true, true],
+      [true, true],
+      [true, true],
+    ],
+    color: '#5888a0',
+    topColor: '#78aac0',
+    sideColor: '#386080',
+    height: 1.5,
+  },
+  {
+    id: 'toilet',
+    nameJa: 'トイレ',
+    emoji: '🚽',
+    shape: [
+      [true],
+      [true],
+    ],
+    color: '#c8c8d8',
+    topColor: '#e8e8f8',
+    sideColor: '#9898a8',
+    height: 2.0,
+  },
+]
+
+export function getTemplate(id: string): FurnitureTemplate | undefined {
+  return FURNITURE_TEMPLATES.find(t => t.id === id)
+}
