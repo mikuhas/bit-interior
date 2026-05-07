@@ -59,6 +59,86 @@ function drawCell(
     ctx.fillRect(x + cellSize - 4, y, 4, cellSize)
     return
   }
+
+  if (type === 'door') {
+    // 壁ベース
+    ctx.fillStyle = '#3d4160'
+    ctx.fillRect(x, y, cellSize, cellSize)
+    ctx.fillStyle = '#5a6080'
+    ctx.fillRect(x, y, cellSize, 4)
+    ctx.fillStyle = '#4d5170'
+    ctx.fillRect(x, y, 4, cellSize)
+    ctx.fillStyle = '#252840'
+    ctx.fillRect(x, y + cellSize - 4, cellSize, 4)
+    ctx.fillStyle = '#2d3050'
+    ctx.fillRect(x + cellSize - 4, y, 4, cellSize)
+    // 開口部（床色）
+    ctx.fillStyle = '#1e3357'
+    ctx.fillRect(x + 4, y + 4, cellSize - 8, cellSize - 8)
+    // 扉パネル＋弧（間取り図スタイル）
+    ctx.save()
+    ctx.strokeStyle = '#e8c050'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(x + 4, y + 4)
+    ctx.lineTo(x + cellSize - 4, y + 4)
+    ctx.stroke()
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.arc(x + 4, y + 4, cellSize - 8, 0, Math.PI / 2)
+    ctx.stroke()
+    ctx.restore()
+    return
+  }
+
+  if (type === 'window') {
+    // 壁ベース
+    ctx.fillStyle = '#3d4160'
+    ctx.fillRect(x, y, cellSize, cellSize)
+    ctx.fillStyle = '#5a6080'
+    ctx.fillRect(x, y, cellSize, 4)
+    ctx.fillStyle = '#4d5170'
+    ctx.fillRect(x, y, 4, cellSize)
+    ctx.fillStyle = '#252840'
+    ctx.fillRect(x, y + cellSize - 4, cellSize, 4)
+    ctx.fillStyle = '#2d3050'
+    ctx.fillRect(x + cellSize - 4, y, 4, cellSize)
+    // ガラス面
+    ctx.fillStyle = 'rgba(100,200,255,0.18)'
+    ctx.fillRect(x + 4, y + 4, cellSize - 8, cellSize - 8)
+    // ガラス分割線（間取り図スタイル）
+    ctx.save()
+    ctx.strokeStyle = 'rgba(160,230,255,0.75)'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(x + 4, y + cellSize / 2)
+    ctx.lineTo(x + cellSize - 4, y + cellSize / 2)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(x + cellSize / 2, y + 4)
+    ctx.lineTo(x + cellSize / 2, y + cellSize - 4)
+    ctx.stroke()
+    ctx.restore()
+    return
+  }
+
+  if (type === 'wallX') {
+    ctx.fillStyle = '#1a2d50'; ctx.fillRect(x, y, cellSize, cellSize)
+    ctx.fillStyle = '#1e3357'; ctx.fillRect(x+2, y+2, cellSize-4, cellSize-4)
+    const th = Math.max(4, Math.round(cellSize * 0.1))
+    ctx.fillStyle = '#3d4160'; ctx.fillRect(x, y+cellSize-th, cellSize, th)
+    ctx.fillStyle = '#5a6080'; ctx.fillRect(x, y+cellSize-th, cellSize, 2)
+    return
+  }
+
+  if (type === 'wallY') {
+    ctx.fillStyle = '#1a2d50'; ctx.fillRect(x, y, cellSize, cellSize)
+    ctx.fillStyle = '#1e3357'; ctx.fillRect(x+2, y+2, cellSize-4, cellSize-4)
+    const th = Math.max(4, Math.round(cellSize * 0.1))
+    ctx.fillStyle = '#3d4160'; ctx.fillRect(x+cellSize-th, y, th, cellSize)
+    ctx.fillStyle = '#5a6080'; ctx.fillRect(x+cellSize-th, y, 2, cellSize)
+    return
+  }
 }
 
 function drawFurnitureCell(
@@ -576,9 +656,15 @@ export default function TopDownCanvas({
     if (!cell) return
     const { row, col } = cell
 
-    if (tool === 'floor' || tool === 'wall' || tool === 'erase') {
+    if (tool === 'floor' || tool === 'wallX' || tool === 'wallY' || tool === 'door' || tool === 'window' || tool === 'erase') {
       mouseDownRef.current = true
-      const newType: CellType = tool === 'floor' ? 'floor' : tool === 'wall' ? 'wall' : 'empty'
+      const newType: CellType =
+        tool === 'floor' ? 'floor'
+        : tool === 'wallX' ? 'wallX'
+        : tool === 'wallY' ? 'wallY'
+        : tool === 'door' ? 'door'
+        : tool === 'window' ? 'window'
+        : 'empty'
       paintTypeRef.current = newType
       onCellChange(row, col, newType)
     } else if (tool === 'furniture' && selectedTemplateId && ghostCell) {
@@ -632,7 +718,7 @@ export default function TopDownCanvas({
       setGhostCell(null)
     }
 
-    if (mouseDownRef.current && (tool === 'floor' || tool === 'wall' || tool === 'erase')) {
+    if (mouseDownRef.current && (tool === 'floor' || tool === 'wallX' || tool === 'wallY' || tool === 'door' || tool === 'window' || tool === 'erase')) {
       onCellChange(row, col, paintTypeRef.current)
     }
 

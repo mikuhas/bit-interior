@@ -7,7 +7,7 @@ import { getTemplate } from '../data/furniture'
 import Toolbar from './Toolbar'
 import FurniturePanel from './FurniturePanel'
 import TopDownCanvas from './TopDownCanvas'
-import IsometricCanvas from './IsometricCanvas'
+import IsometricView from './IsometricView'
 
 interface Props {
   bitSettings: BitSettings
@@ -299,7 +299,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
               onRotate={handleRotate}
             />
           ) : (
-            <IsometricCanvas room={room} darkMode={darkMode} />
+            <IsometricView room={room} darkMode={darkMode} />
           )}
         </div>
       </div>

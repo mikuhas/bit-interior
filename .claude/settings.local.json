@@ -8,7 +8,16 @@
       "Bash(npx vite *)",
       "Bash(curl -s http://localhost:5173)",
       "Bash(curl -s http://localhost:5175)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Recurse -Path \"C:\\\\workspace\\\\bit-interior\" -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(ConvertTo-Csv -NoTypeInformation)",
+      "Bash(Out-String)",
+      "Bash(not exist *)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)",
+      "WebSearch"
     ]
   }
 }

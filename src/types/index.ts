@@ -5,10 +5,10 @@ export interface BitSettings {
   unit: BitUnit
 }
 
-export type CellType = 'empty' | 'floor' | 'wall'
+export type CellType = 'empty' | 'floor' | 'wall' | 'wallX' | 'wallY' | 'door' | 'window'
 
 // 'furniture' は家具配置モード(テンプレートを選んでキャンバス上で配置)
-export type EditTool = 'floor' | 'wall' | 'erase' | 'select' | 'furniture'
+export type EditTool = 'floor' | 'wallX' | 'wallY' | 'door' | 'window' | 'erase' | 'select' | 'furniture'
 
 export type ViewMode = 'topdown' | 'isometric'
 

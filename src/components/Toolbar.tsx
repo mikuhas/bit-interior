@@ -24,7 +24,10 @@ interface Props {
 
 const TOOLS: { id: EditTool; label: string }[] = [
   { id: 'floor', label: 'FLOOR' },
-  { id: 'wall', label: 'WALL' },
+  { id: 'wallX', label: 'W-X' },
+  { id: 'wallY', label: 'W-Y' },
+  { id: 'door', label: 'DOOR' },
+  { id: 'window', label: 'WIN' },
   { id: 'erase', label: 'ERASE' },
   { id: 'select', label: 'SELECT' },
   { id: 'furniture', label: 'PLACE' },

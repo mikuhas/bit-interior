@@ -51,118 +51,275 @@ type CellInfo = {
   localRow: number; localCol: number; shapeRows: number; shapeCols: number
 }
 
+// アイソメトリック面に等幅の線を引くヘルパー
+function isoLine(
+  ctx: CanvasRenderingContext2D, x: number, y: number, h: number,
+  u0: number, v0: number, u1: number, v1: number, color: string, lw = 1
+) {
+  const [ax, ay] = isoUV(x, y, h, u0, v0)
+  const [bx, by] = isoUV(x, y, h, u1, v1)
+  ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by)
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke()
+}
+
+// 側面(left=SW / right=SE)にストライプ線を引く
+function sideLine(
+  ctx: CanvasRenderingContext2D, x: number, y: number, cubeH: number,
+  tU: number, side: 'left' | 'right', color: string, lw = 0.8
+) {
+  ctx.beginPath()
+  if (side === 'left') {
+    ctx.moveTo(x - TILE_W / 2, y + TILE_H / 2 + cubeH * tU)
+    ctx.lineTo(x, y + TILE_H + cubeH * tU)
+  } else {
+    ctx.moveTo(x + TILE_W / 2, y + TILE_H / 2 + cubeH * tU)
+    ctx.lineTo(x, y + TILE_H + cubeH * tU)
+  }
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke()
+}
+
 function drawDecoration(ctx: CanvasRenderingContext2D, fc: CellInfo, x: number, y: number, cubeH: number) {
-  const { templateId, localRow, shapeCols, color, topColor } = fc
+  const { templateId, localRow, localCol, shapeCols, shapeRows, color, topColor } = fc
+
+  ctx.save()
+
   switch (templateId) {
+
     case 'bed-s': case 'bed-d': {
-      for (let i = 1; i < 3; i++) {
-        const t = i / 3
-        ctx.beginPath()
-        const [lx0, ly0] = isoUV(x, y, cubeH, t, 0); const [lx1, ly1] = isoUV(x, y, cubeH, t, 1)
-        ctx.moveTo(lx0, ly0); ctx.lineTo(lx1, ly1)
-        ctx.strokeStyle = mix(topColor, '#fff', 0.15); ctx.lineWidth = 1; ctx.stroke()
-      }
+      // フレーム (濃い木色ボーダー)
+      const frame = shade(color, 0.55)
+      isoRect(ctx, x, y, cubeH, 0, 0, 1, 0.1, frame)  // head end
+      isoRect(ctx, x, y, cubeH, 0, 0.9, 1, 1, frame)  // foot end
+      isoRect(ctx, x, y, cubeH, 0, 0, 0.1, 1, frame)  // left rail
+      isoRect(ctx, x, y, cubeH, 0.9, 0, 1, 1, frame)  // right rail
+      // マットレス (クリーム布地)
+      const mattress = mix(color, '#f0e8d0', 0.72)
+      isoRect(ctx, x, y, cubeH, 0.1, 0.1, 0.9, 0.9, mattress)
+      // マットレス縫い目
+      isoLine(ctx, x, y, cubeH, 0.1, 0.37, 0.9, 0.37, shade(mattress, 0.82), 0.7)
+      isoLine(ctx, x, y, cubeH, 0.1, 0.63, 0.9, 0.63, shade(mattress, 0.82), 0.7)
+      // 枕 (headboard側)
       if (localRow === 0) {
-        const pc = mix(color, '#f4ead8', 0.8)
-        isoRect(ctx, x, y, cubeH, 0.1, 0.1, 0.9, 0.55, pc, shade(pc, 0.8))
+        const pillow = mix(mattress, '#fff', 0.4)
+        isoRect(ctx, x, y, cubeH, 0.15, 0.12, 0.85, 0.38, pillow, shade(pillow, 0.78))
+        // 枕の縫い目
+        isoLine(ctx, x, y, cubeH, 0.5, 0.13, 0.5, 0.37, shade(pillow, 0.7), 0.5)
       }
-      if (localRow === 0 || localRow === fc.shapeRows - 1)
-        isoRect(ctx, x, y, cubeH, 0, 0.72, 1, 1, shade(color, 0.65))
+      // ヘッドボード (フレーム先頭セルの側面を濃く)
+      if (localRow === 0) {
+        sideLine(ctx, x, y, cubeH, 0, 'left', shade(frame, 0.7), 2)
+        sideLine(ctx, x, y, cubeH, 0, 'right', shade(frame, 0.85), 2)
+      }
       break
     }
+
     case 'sofa': {
-      isoRect(ctx, x, y, cubeH, 0.07, 0.07, 0.93, 0.93, mix(topColor, color, 0.35), shade(topColor, 0.75))
-      if (localRow === 0) isoRect(ctx, x, y, cubeH, 0.05, 0.05, 0.95, 0.38, shade(color, 0.55))
-      if (shapeCols > 1 && fc.localCol < shapeCols - 1) {
-        ctx.beginPath()
-        const [sx, sy] = isoUV(x, y, cubeH, 1, 0.12); const [ex, ey] = isoUV(x, y, cubeH, 1, 0.88)
-        ctx.moveTo(sx, sy); ctx.lineTo(ex, ey)
-        ctx.strokeStyle = shade(color, 0.5); ctx.lineWidth = 1.5; ctx.stroke()
+      const fabric = mix(topColor, color, 0.4)
+      const dark = shade(color, 0.45)
+      // 座面クッション
+      isoRect(ctx, x, y, cubeH, 0.08, 0.35, 0.92, 0.95, fabric, shade(fabric, 0.78))
+      // クッション間仕切り
+      if (shapeCols > 1 && localCol < shapeCols - 1)
+        isoLine(ctx, x, y, cubeH, 1, 0.35, 1, 0.95, dark, 1.5)
+      // 背もたれ (後列)
+      if (localRow === 0) {
+        isoRect(ctx, x, y, cubeH, 0.06, 0.05, 0.94, 0.32, shade(color, 0.58))
+        // 背もたれ丸み表現: 上辺に明るいハイライト線
+        isoLine(ctx, x, y, cubeH, 0.06, 0.05, 0.94, 0.05, mix(topColor,'#fff',0.3), 1.5)
+      }
+      // 肘置き (左右端 = 最左列・最右列)
+      if (localCol === 0) {
+        isoRect(ctx, x, y, cubeH, 0, 0.05, 0.07, 0.95, shade(color, 0.62))
+        isoLine(ctx, x, y, cubeH, 0, 0.05, 0, 0.95, mix(topColor,'#fff',0.25), 1.2)
+      }
+      if (localCol === shapeCols - 1) {
+        isoRect(ctx, x, y, cubeH, 0.93, 0.05, 1, 0.95, shade(color, 0.62))
+        isoLine(ctx, x, y, cubeH, 1, 0.05, 1, 0.95, mix(topColor,'#fff',0.25), 1.2)
       }
       break
     }
-    case 'bookshelf': {
-      const BC = ['#d04040','#4080d0','#40b050','#d09030','#a040c0','#40b0a0']
-      for (let b = 0; b < 3; b++) {
-        const bc = BC[(fc.localCol * 3 + b) % BC.length]
-        isoRect(ctx, x, y, cubeH, b/3+0.05, 0.1, (b+1)/3-0.05, 0.9, bc, shade(bc, 0.7))
+
+    case 'desk': {
+      // 脚 (4隅に細い柱)
+      const legC = shade(color, 0.42)
+      const legW = 0.09
+      isoRect(ctx, x, y, cubeH, 0,        0,        legW,      legW,      legC)
+      isoRect(ctx, x, y, cubeH, 1-legW,   0,        1,         legW,      legC)
+      isoRect(ctx, x, y, cubeH, 0,        1-legW,   legW,      1,         legC)
+      isoRect(ctx, x, y, cubeH, 1-legW,   1-legW,   1,         1,         legC)
+      // 天板 (脚の上に薄い板)
+      const top = shade(topColor, 1.1)
+      isoRect(ctx, x, y, cubeH, 0, 0, 1, 1, top + '99')
+      // 天板厚みライン (前辺に濃い線)
+      isoLine(ctx, x, y, cubeH, 0, 1, 1, 1, shade(color, 0.38), 2)
+      // 木目ライン
+      const grain = mix(topColor, '#fff', 0.18)
+      for (let i = 1; i < 3; i++)
+        isoLine(ctx, x, y, cubeH, i*0.3+0.08, 0.06, i*0.3+0.14, 0.94, grain, 0.6)
+      break
+    }
+
+    case 'chair': {
+      // 脚 (4隅)
+      const legC = shade(color, 0.40)
+      const lw2 = 0.12
+      isoRect(ctx, x, y, cubeH, 0,      0,      lw2,    lw2,    legC)
+      isoRect(ctx, x, y, cubeH, 1-lw2,  0,      1,      lw2,    legC)
+      isoRect(ctx, x, y, cubeH, 0,      1-lw2,  lw2,    1,      legC)
+      isoRect(ctx, x, y, cubeH, 1-lw2,  1-lw2,  1,      1,      legC)
+      // 座面パッド
+      const pad = mix(topColor, color, 0.3)
+      isoRect(ctx, x, y, cubeH, lw2, lw2+0.1, 1-lw2, 1-lw2, pad, shade(pad, 0.75))
+      // 座面縁取り
+      isoLine(ctx, x, y, cubeH, lw2, lw2+0.1, 1-lw2, lw2+0.1, mix(pad,'#fff',0.3), 1)
+      // 背もたれ (先頭セル)
+      if (localRow === 0) {
+        isoRect(ctx, x, y, cubeH, 0.1, 0.05, 0.9, 0.28, shade(color, 0.55))
+        isoLine(ctx, x, y, cubeH, 0.1, 0.05, 0.9, 0.05, mix(topColor,'#fff',0.25), 1.2)
       }
+      break
+    }
+
+    case 'bookshelf': {
+      const BC = ['#c83030','#3070c8','#30a040','#c08020','#8030b0','#30a898']
+      // 本 (3冊×セル)
+      for (let b = 0; b < 3; b++) {
+        const bc = BC[(localCol * 3 + b) % BC.length]
+        isoRect(ctx, x, y, cubeH, b/3+0.04, 0.08, (b+1)/3-0.04, 0.92, bc, shade(bc, 0.65))
+        // 本の背表紙光沢
+        isoLine(ctx, x, y, cubeH, b/3+0.06, 0.1, b/3+0.1, 0.9, mix(bc,'#fff',0.22), 0.7)
+      }
+      // 棚板 (1/3, 2/3 の水平断面)
+      const shelf = shade(color, 1.3)
       for (let s = 1; s < 3; s++) {
         const t = s / 3
-        ctx.beginPath()
-        ctx.moveTo(x-TILE_W/2, y+TILE_H/2+cubeH*t); ctx.lineTo(x, y+TILE_H+cubeH*t)
-        ctx.strokeStyle = shade(color, 1.5); ctx.lineWidth = 1; ctx.stroke()
-        ctx.beginPath()
-        ctx.moveTo(x+TILE_W/2, y+TILE_H/2+cubeH*t); ctx.lineTo(x, y+TILE_H+cubeH*t); ctx.stroke()
+        // 棚板: 上面ライン (左面・右面に水平線)
+        sideLine(ctx, x, y, cubeH, t, 'left',  shelf, 1.2)
+        sideLine(ctx, x, y, cubeH, t, 'right', shelf, 1.2)
       }
+      // 背板
+      isoRect(ctx, x, y, cubeH, 0, 0, 1, 1, shade(color, 0.3) + '50')
       break
     }
+
     case 'dresser': {
-      isoRect(ctx, x, y, cubeH, 0.08, 0.1, 0.92, 0.9, shade(topColor, 0.88), shade(color, 0.55))
-      const [hx, hy] = isoUV(x, y, cubeH, 0.5, 0.5)
-      ctx.beginPath(); ctx.arc(hx, hy, 2.5, 0, Math.PI*2); ctx.fillStyle='#c8a820'; ctx.fill()
-      const mh = cubeH*0.5
-      ctx.beginPath(); ctx.moveTo(x-TILE_W/2, y+TILE_H/2+mh); ctx.lineTo(x, y+TILE_H+mh)
-      ctx.strokeStyle = shade(color, 0.45); ctx.lineWidth=1; ctx.stroke()
-      ctx.beginPath(); ctx.moveTo(x+TILE_W/2, y+TILE_H/2+mh); ctx.lineTo(x, y+TILE_H+mh); ctx.stroke()
-      break
-    }
-    case 'desk': {
-      const gc = shade(topColor, 1.18)
-      for (let i = 0; i < 3; i++) {
-        ctx.beginPath()
-        const [lx0,ly0]=isoUV(x,y,cubeH,0.12+i*0.32,0.08); const [lx1,ly1]=isoUV(x,y,cubeH,0.21+i*0.32,0.92)
-        ctx.moveTo(lx0,ly0); ctx.lineTo(lx1,ly1)
-        ctx.strokeStyle=gc; ctx.lineWidth=0.5; ctx.stroke()
+      // 引き出し分割線 (上半/下半)
+      const divC = shade(color, 0.38)
+      sideLine(ctx, x, y, cubeH, 0.5, 'left',  divC, 1)
+      sideLine(ctx, x, y, cubeH, 0.5, 'right', divC, 1)
+      // 扉パネル (上面に2段の引き出し)
+      const panel = shade(topColor, 0.9)
+      isoRect(ctx, x, y, cubeH, 0.08, 0.08, 0.92, 0.48, panel, shade(panel, 0.72))
+      isoRect(ctx, x, y, cubeH, 0.08, 0.52, 0.92, 0.92, panel, shade(panel, 0.72))
+      // 取っ手 (上下パネル中央)
+      for (const v of [0.28, 0.72]) {
+        const [hx, hy] = isoUV(x, y, cubeH, 0.5, v)
+        ctx.beginPath(); ctx.arc(hx, hy, 2.5, 0, Math.PI*2)
+        ctx.fillStyle = '#d4b020'; ctx.fill()
+        ctx.strokeStyle = shade('#d4b020', 0.6); ctx.lineWidth = 0.5; ctx.stroke()
       }
       break
     }
-    case 'chair':
-      isoRect(ctx, x, y, cubeH, 0.1, 0.1, 0.9, 0.9, mix(topColor,'#fff',0.1), shade(color,0.65))
-      if (localRow===0) isoRect(ctx, x, y, cubeH, 0.05, 0.05, 0.95, 0.35, shade(color,0.6))
+
+    case 'coffee-table': {
+      // ガラス天板
+      isoRect(ctx, x, y, cubeH, 0.06, 0.06, 0.94, 0.94, 'rgba(180,220,255,0.22)', 'rgba(160,200,240,0.6)')
+      // 光沢
+      isoRect(ctx, x, y, cubeH, 0.08, 0.08, 0.42, 0.38, 'rgba(255,255,255,0.12)')
+      // 脚
+      const legC = shade(color, 0.45)
+      const lw3 = 0.1
+      isoRect(ctx, x, y, cubeH, 0,      0,      lw3,    lw3,    legC)
+      isoRect(ctx, x, y, cubeH, 1-lw3,  0,      1,      lw3,    legC)
+      isoRect(ctx, x, y, cubeH, 0,      1-lw3,  lw3,    1,      legC)
+      isoRect(ctx, x, y, cubeH, 1-lw3,  1-lw3,  1,      1,      legC)
       break
-    case 'coffee-table':
-      isoRect(ctx, x, y, cubeH, 0.05, 0.05, 0.95, 0.95, mix(topColor,'#fff',0.18), shade(color,0.65))
-      break
+    }
+
     case 'dining-table': {
-      const gc = mix(topColor,'#fff',0.15)
-      for (let i=0;i<4;i++) {
-        ctx.beginPath()
-        const [lx0,ly0]=isoUV(x,y,cubeH,0.1+i*0.25,0.05); const [lx1,ly1]=isoUV(x,y,cubeH,0.15+i*0.25,0.95)
-        ctx.moveTo(lx0,ly0); ctx.lineTo(lx1,ly1)
-        ctx.strokeStyle=gc; ctx.lineWidth=0.7; ctx.stroke()
-      }
+      // 天板 (木目)
+      const top2 = mix(topColor, '#fff', 0.12)
+      isoRect(ctx, x, y, cubeH, 0.04, 0.04, 0.96, 0.96, top2 + 'cc')
+      // 木目ライン
+      const grain2 = mix(topColor, '#fff', 0.22)
+      for (let i = 0; i < 3; i++)
+        isoLine(ctx, x, y, cubeH, 0.15+i*0.28, 0.06, 0.2+i*0.28, 0.94, grain2, 0.6)
+      // 天板厚みライン
+      isoLine(ctx, x, y, cubeH, 0.04, 0.96, 0.96, 0.96, shade(color, 0.4), 1.5)
       break
     }
-    case 'tv-stand':
-      isoRect(ctx, x, y, cubeH, 0.06, 0.06, 0.94, 0.94, '#0a0a18', '#1a1a28')
-      isoRect(ctx, x, y, cubeH, 0.08, 0.08, 0.42, 0.42, 'rgba(255,255,255,0.07)')
+
+    case 'tv-stand': {
+      // TV画面 (青黒)
+      isoRect(ctx, x, y, cubeH, 0.06, 0.06, 0.94, 0.94, '#06060f')
+      // 画面発光
+      isoRect(ctx, x, y, cubeH, 0.08, 0.08, 0.92, 0.92, 'rgba(30,60,140,0.35)')
+      // 光沢
+      isoRect(ctx, x, y, cubeH, 0.08, 0.08, 0.40, 0.38, 'rgba(100,150,255,0.12)')
+      // ベゼル枠
+      isoLine(ctx, x, y, cubeH, 0.06, 0.06, 0.94, 0.06, '#1a1a40', 1)
+      isoLine(ctx, x, y, cubeH, 0.06, 0.94, 0.94, 0.94, '#1a1a40', 1)
       break
+    }
+
     case 'plant': {
-      const [cx, cy] = isoUV(x, y, cubeH, 0.5, 0.5)
-      ctx.beginPath(); ctx.ellipse(cx,cy,10,6,0,0,Math.PI*2); ctx.fillStyle=mix(color,'#704020',0.7); ctx.fill()
-      const LC=['#2a8a18','#3ab020','#4ac030','#20700e','#35a818']
-      for (let i=0;i<5;i++) {
-        const a=(i/5)*Math.PI*2; const lx=cx+Math.cos(a)*11; const ly=cy+Math.sin(a)*6-4
-        ctx.beginPath(); ctx.ellipse(lx,ly,9,5,a,0,Math.PI*2); ctx.fillStyle=LC[i%LC.length]; ctx.fill()
+      const [cx2, cy2] = isoUV(x, y, cubeH, 0.5, 0.5)
+      // 鉢 (楕円)
+      ctx.beginPath(); ctx.ellipse(cx2, cy2+4, 10, 5, 0, 0, Math.PI*2)
+      ctx.fillStyle = mix(color, '#7a4820', 0.65); ctx.fill()
+      ctx.strokeStyle = shade('#7a4820', 0.55); ctx.lineWidth = 0.8; ctx.stroke()
+      // 葉クラスター
+      const LC = ['#228814','#33a820','#44b830','#186808','#2a9018']
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2
+        const lx2 = cx2 + Math.cos(a) * 11; const ly2 = cy2 + Math.sin(a) * 6 - 5
+        ctx.beginPath(); ctx.ellipse(lx2, ly2, 8, 5, a, 0, Math.PI * 2)
+        ctx.fillStyle = LC[i % LC.length]; ctx.fill()
       }
-      ctx.beginPath(); ctx.arc(cx,cy-3,5,0,Math.PI*2); ctx.fillStyle=LC[0]; ctx.fill()
+      // 中央葉
+      ctx.beginPath(); ctx.arc(cx2, cy2-5, 5, 0, Math.PI*2)
+      ctx.fillStyle = LC[0]; ctx.fill()
       break
     }
-    case 'bathtub':
-      isoRect(ctx, x, y, cubeH, 0.12, 0.12, 0.88, 0.88, mix(color,'#6ab8d8',0.5), shade('#6ab8d8',0.75))
-      isoRect(ctx, x, y, cubeH, 0.15, 0.15, 0.5, 0.4, 'rgba(255,255,255,0.15)')
+
+    case 'bathtub': {
+      // 外縁 (白磁)
+      const porcelain = mix(topColor, '#fff', 0.45)
+      isoRect(ctx, x, y, cubeH, 0.06, 0.06, 0.94, 0.94, shade(porcelain, 0.88), shade(porcelain, 0.65))
+      // 内側 (水色)
+      isoRect(ctx, x, y, cubeH, 0.15, 0.15, 0.85, 0.85, mix(color, '#5ab0d0', 0.6))
+      // 水面光沢
+      isoRect(ctx, x, y, cubeH, 0.17, 0.17, 0.48, 0.42, 'rgba(255,255,255,0.18)')
+      // 蛇口 (head端)
+      if (localRow === 0) {
+        const [fx, fy] = isoUV(x, y, cubeH, 0.5, 0.1)
+        ctx.beginPath(); ctx.arc(fx, fy, 3, 0, Math.PI*2)
+        ctx.fillStyle = '#c0c0d0'; ctx.fill()
+      }
       break
+    }
+
     case 'toilet': {
-      const [tcx,tcy]=isoUV(x,y,cubeH,0.5,0.55)
-      const sc=mix(topColor,'#fff',0.28)
-      ctx.beginPath(); ctx.ellipse(tcx,tcy,13,7,0,0,Math.PI*2); ctx.fillStyle=sc; ctx.fill()
-      ctx.strokeStyle=shade(sc,0.75); ctx.lineWidth=1; ctx.stroke()
-      ctx.beginPath(); ctx.ellipse(tcx,tcy+1,7,4,0,0,Math.PI*2); ctx.fillStyle=shade(topColor,0.5); ctx.fill()
-      if (localRow===0) isoRect(ctx,x,y,cubeH,0.15,0.1,0.85,0.48,mix(topColor,'#fff',0.18),shade(topColor,0.65))
+      const porcelain2 = mix(topColor, '#fff', 0.42)
+      // タンク (head側)
+      if (localRow === 0) {
+        isoRect(ctx, x, y, cubeH, 0.12, 0.06, 0.88, 0.44, porcelain2, shade(porcelain2, 0.7))
+        // タンク上蓋ライン
+        isoLine(ctx, x, y, cubeH, 0.12, 0.06, 0.88, 0.06, mix(porcelain2,'#fff',0.3), 1)
+      }
+      // 便座 (楕円)
+      const [tcx, tcy] = isoUV(x, y, cubeH, 0.5, 0.62)
+      ctx.beginPath(); ctx.ellipse(tcx, tcy, 14, 8, 0, 0, Math.PI*2)
+      ctx.fillStyle = porcelain2; ctx.fill()
+      ctx.strokeStyle = shade(porcelain2, 0.68); ctx.lineWidth = 1; ctx.stroke()
+      // 穴
+      ctx.beginPath(); ctx.ellipse(tcx, tcy+1, 8, 4.5, 0, 0, Math.PI*2)
+      ctx.fillStyle = shade(topColor, 0.38); ctx.fill()
       break
     }
   }
+
+  ctx.restore()
 }
 
 export default function IsometricCanvas({ room, darkMode = true }: Props) {
@@ -294,10 +451,10 @@ export default function IsometricCanvas({ room, darkMode = true }: Props) {
 
       const baseY = y - zOff
 
-      // 強めのコントラストで面を分離
+      // top=最明, right=中間, left=最暗
       const topFace   = shade(fc.color, 1.60)
-      const leftFace  = shade(fc.color, 0.70)
-      const rightFace = shade(fc.color, 0.38)
+      const leftFace  = shade(fc.color, 0.38)
+      const rightFace = shade(fc.color, 0.65)
       const outerEdge = shade(fc.color, 0.22)
 
       const leftInt  = isSameInstance(row+1, col, fc.instanceId)
