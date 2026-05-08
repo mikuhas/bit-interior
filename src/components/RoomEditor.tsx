@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { BitSettings, EditTool, ViewMode, PlacedFurniture, CellType, BitUnit } from '../types'
 import { useRoom } from '../hooks/useRoom'
 import { saveToLocalStorage, loadFromLocalStorage, hasSaveData, exportAsJson, importFromJson } from '../utils/save'
@@ -21,6 +21,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
     room, setCell, placeFurniture, moveFurniture, removeFurniture,
     updateFurnitureColor, updateFurnitureZ, updateFurnitureScale,
     updateRoomAppearance, resizeRoom, loadRoom,
+    beginInteraction, undo,
   } = useRoom(initialWidth, initialHeight)
 
   const [viewMode, setViewMode] = useState<ViewMode>('topdown')
@@ -38,6 +39,17 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
   const [editWallColor, setEditWallColor] = useState('#2d3050')
   const [editRoomW, setEditRoomW] = useState(initialWidth)
   const [editRoomH, setEditRoomH] = useState(initialHeight)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault()
+        undo()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [undo])
 
   const handleRotate = useCallback(() => {
     setFurnitureRotation(prev => ((prev + 1) % 4) as 0 | 1 | 2 | 3)
@@ -265,7 +277,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
       )}
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {viewMode === 'topdown' && (
+        {(viewMode === 'topdown' || viewMode === 'blueprint') && (
           <FurniturePanel
             selectedTemplateId={selectedTemplateId}
             onSelect={handleSelectTemplate}
@@ -285,7 +297,9 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
           justifyContent: viewMode === 'isometric' ? 'center' : 'flex-start',
           padding: 16, background: darkMode ? '#080912' : '#b8c8dc',
         }}>
-          {viewMode === 'topdown' ? (
+          {viewMode === 'isometric' ? (
+            <IsometricView room={room} darkMode={darkMode} />
+          ) : (
             <TopDownCanvas
               room={room} tool={tool}
               selectedTemplateId={selectedTemplateId}
@@ -297,16 +311,16 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
               onMoveFurniture={handleMoveFurniture}
               onKeyDelete={handleDeleteSelected}
               onRotate={handleRotate}
+              onInteractionStart={beginInteraction}
+              blueprintMode={viewMode === 'blueprint'}
             />
-          ) : (
-            <IsometricView room={room} darkMode={darkMode} />
           )}
         </div>
       </div>
 
       <div className="status-bar">
-        <span>MODE: <span style={{ color: '#ffcc00' }}>{viewMode === 'topdown' ? 'TOP DOWN' : 'ISOMETRIC'}</span></span>
-        {viewMode === 'topdown' && (
+        <span>MODE: <span style={{ color: '#ffcc00' }}>{viewMode === 'topdown' ? 'TOP DOWN' : viewMode === 'isometric' ? 'ISOMETRIC' : 'BLUEPRINT'}</span></span>
+        {(viewMode === 'topdown' || viewMode === 'blueprint') && (
           <>
             <span className="sep">|</span>
             <span>TOOL: <span style={{ color: '#00ff88' }}>{tool.toUpperCase()}</span></span>

@@ -1,9 +1,23 @@
 import { useState, useCallback } from 'react'
 import { RoomState, CellType, PlacedFurniture } from '../types'
-import { createInitialRoom } from '../utils/room'
+import { createInitialRoom, detectAutoFloor } from '../utils/room'
 
 export function useRoom(initialWidth = 12, initialHeight = 10) {
   const [room, setRoom] = useState<RoomState>(() => createInitialRoom(initialWidth, initialHeight))
+  const [history, setHistory] = useState<RoomState[]>([])
+
+  const beginInteraction = useCallback(() => {
+    setHistory(prev => [...prev.slice(-49), room])
+  }, [room])
+
+  const undo = useCallback(() => {
+    setHistory(prev => {
+      if (prev.length === 0) return prev
+      const last = prev[prev.length - 1]
+      setRoom(last)
+      return prev.slice(0, -1)
+    })
+  }, [])
 
   const setCell = useCallback((row: number, col: number, type: CellType) => {
     setRoom(prev => {
@@ -12,7 +26,7 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
       const newCells = prev.cells.map((r, ri) =>
         ri === row ? r.map((c, ci) => (ci === col ? type : c)) : r
       )
-      return { ...prev, cells: newCells }
+      return { ...prev, cells: detectAutoFloor(newCells, prev.width, prev.height) }
     })
   }, [])
 
@@ -71,7 +85,7 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
         )
       )
       const furniture = prev.furniture.filter(f => f.y < h && f.x < w)
-      return { ...prev, width: w, height: h, cells: newCells, furniture }
+      return { ...prev, width: w, height: h, cells: detectAutoFloor(newCells, w, h), furniture }
     })
   }, [])
 
@@ -111,5 +125,7 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
     resizeRoom,
     resetRoom,
     loadRoom,
+    beginInteraction,
+    undo,
   }
 }

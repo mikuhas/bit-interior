@@ -17,6 +17,8 @@ interface Props {
   onMoveFurniture: (id: string, x: number, y: number) => void
   onKeyDelete?: () => void
   onRotate?: () => void
+  onInteractionStart?: () => void
+  blueprintMode?: boolean
 }
 
 function drawCell(
@@ -35,10 +37,10 @@ function drawCell(
     return
   }
 
-  if (type === 'floor') {
+  if (type === 'floor' || type === 'autoFloor') {
     ctx.fillStyle = '#1a2d50'
     ctx.fillRect(x, y, cellSize, cellSize)
-    ctx.fillStyle = '#1e3357'
+    ctx.fillStyle = type === 'autoFloor' ? '#1c3258' : '#1e3357'
     ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4)
     ctx.strokeStyle = '#0d1535'
     ctx.lineWidth = 1
@@ -477,6 +479,8 @@ export default function TopDownCanvas({
   onMoveFurniture,
   onKeyDelete,
   onRotate,
+  onInteractionStart,
+  blueprintMode = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null)
@@ -521,73 +525,87 @@ export default function TopDownCanvas({
       }
     }
 
-    // Draw placed furniture
-    for (const pf of room.furniture) {
-      const tmpl = getTemplate(pf.templateId)
-      if (!tmpl) continue
-      const shape = getEffectiveShape(tmpl, pf.rotation, pf.scaleW ?? 1, pf.scaleH ?? 1)
-      const isSelected = pf.instanceId === selectedInstanceId
-      const effectiveColor = pf.colorOverride ?? tmpl.color
-      const effectiveTopColor = pf.colorOverride
-        ? lighten(pf.colorOverride, 0.35)
-        : tmpl.topColor
-      const shapeRows = shape.length
-      const shapeCols = shape[0]?.length ?? 1
+    if (blueprintMode) {
+      // 図面モード: 家具をアウトライン＋テキストで表示
+      for (const pf of room.furniture) {
+        const tmpl = getTemplate(pf.templateId)
+        if (!tmpl) continue
+        const shape = getEffectiveShape(tmpl, pf.rotation, pf.scaleW ?? 1, pf.scaleH ?? 1)
+        const shapeRows = shape.length
+        const shapeCols = shape[0]?.length ?? 1
+        const isSelected = pf.instanceId === selectedInstanceId
 
-      // ベース描画
-      for (let r = 0; r < shape.length; r++) {
-        for (let c = 0; c < shape[r].length; c++) {
-          if (shape[r][c]) {
-            drawFurnitureCell(
-              ctx,
-              pf.x + c,
-              pf.y + r,
-              effectiveColor,
-              effectiveTopColor,
-              CELL_SIZE,
-              tmpl.height
-            )
+        for (let r = 0; r < shapeRows; r++) {
+          for (let c = 0; c < shapeCols; c++) {
+            if (!shape[r][c]) continue
+            const px = (pf.x + c) * CELL_SIZE
+            const py = (pf.y + r) * CELL_SIZE
+            ctx.fillStyle = isSelected ? 'rgba(255,220,0,0.15)' : 'rgba(0,180,220,0.12)'
+            ctx.fillRect(px + 1, py + 1, CELL_SIZE - 2, CELL_SIZE - 2)
+            ctx.strokeStyle = isSelected ? '#ffcc00' : '#00aadd'
+            ctx.lineWidth = 1.5
+            ctx.setLineDash([])
+            ctx.strokeRect(px + 1.5, py + 1.5, CELL_SIZE - 3, CELL_SIZE - 3)
           }
         }
-      }
-
-      // 識別アイコン描画 (ベースの上に重ねる)
-      for (let r = 0; r < shape.length; r++) {
-        for (let c = 0; c < shape[r].length; c++) {
-          if (shape[r][c]) {
-            drawFurnitureIcon(
-              ctx,
-              pf.x + c,
-              pf.y + r,
-              tmpl.id,
-              effectiveColor,
-              effectiveTopColor,
-              r, c,
-              shapeRows,
-              shapeCols,
-              CELL_SIZE
-            )
-          }
-        }
-      }
-
-      // Selection border
-      if (isSelected) {
+        // 家具名をセンターに表示
+        const cx = (pf.x + shapeCols / 2) * CELL_SIZE
+        const cy = (pf.y + shapeRows / 2) * CELL_SIZE
         ctx.save()
-        ctx.strokeStyle = '#ffff00'
-        ctx.lineWidth = 3
-        ctx.setLineDash([6, 3])
+        ctx.fillStyle = isSelected ? '#ffcc00' : '#00eeff'
+        ctx.font = `bold 7px 'Press Start 2P', monospace`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(tmpl.nameJa, cx, cy)
+        ctx.restore()
+      }
+    } else {
+      // 通常モード: 家具をカラーブロック＋アイコンで表示
+      for (const pf of room.furniture) {
+        const tmpl = getTemplate(pf.templateId)
+        if (!tmpl) continue
+        const shape = getEffectiveShape(tmpl, pf.rotation, pf.scaleW ?? 1, pf.scaleH ?? 1)
+        const isSelected = pf.instanceId === selectedInstanceId
+        const effectiveColor = pf.colorOverride ?? tmpl.color
+        const effectiveTopColor = pf.colorOverride
+          ? lighten(pf.colorOverride, 0.35)
+          : tmpl.topColor
+        const shapeRows = shape.length
+        const shapeCols = shape[0]?.length ?? 1
+
         for (let r = 0; r < shape.length; r++) {
           for (let c = 0; c < shape[r].length; c++) {
             if (shape[r][c]) {
-              const px = (pf.x + c) * CELL_SIZE
-              const py = (pf.y + r) * CELL_SIZE
-              ctx.strokeRect(px + 2, py + 2, CELL_SIZE - 4, CELL_SIZE - 4)
+              drawFurnitureCell(ctx, pf.x + c, pf.y + r, effectiveColor, effectiveTopColor, CELL_SIZE, tmpl.height)
             }
           }
         }
-        ctx.setLineDash([])
-        ctx.restore()
+
+        for (let r = 0; r < shape.length; r++) {
+          for (let c = 0; c < shape[r].length; c++) {
+            if (shape[r][c]) {
+              drawFurnitureIcon(ctx, pf.x + c, pf.y + r, tmpl.id, effectiveColor, effectiveTopColor, r, c, shapeRows, shapeCols, CELL_SIZE)
+            }
+          }
+        }
+
+        if (isSelected) {
+          ctx.save()
+          ctx.strokeStyle = '#ffff00'
+          ctx.lineWidth = 3
+          ctx.setLineDash([6, 3])
+          for (let r = 0; r < shape.length; r++) {
+            for (let c = 0; c < shape[r].length; c++) {
+              if (shape[r][c]) {
+                const px = (pf.x + c) * CELL_SIZE
+                const py = (pf.y + r) * CELL_SIZE
+                ctx.strokeRect(px + 2, py + 2, CELL_SIZE - 4, CELL_SIZE - 4)
+              }
+            }
+          }
+          ctx.setLineDash([])
+          ctx.restore()
+        }
       }
     }
 
@@ -623,7 +641,7 @@ export default function TopDownCanvas({
       ctx.fillStyle = 'rgba(255,255,255,0.07)'
       ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE)
     }
-  }, [room, hoverCell, ghostCell, tool, selectedTemplateId, furnitureRotation, selectedInstanceId, canvasWidth, canvasHeight])
+  }, [room, hoverCell, ghostCell, tool, selectedTemplateId, furnitureRotation, selectedInstanceId, canvasWidth, canvasHeight, blueprintMode])
 
   const getCellFromEvent = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
@@ -654,6 +672,7 @@ export default function TopDownCanvas({
   const onMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const cell = getCellFromEvent(e)
     if (!cell) return
+    onInteractionStart?.()
     const { row, col } = cell
 
     if (tool === 'floor' || tool === 'wallX' || tool === 'wallY' || tool === 'door' || tool === 'window' || tool === 'erase') {
@@ -700,7 +719,7 @@ export default function TopDownCanvas({
         onSelectFurniture(null)
       }
     }
-  }, [tool, selectedTemplateId, ghostCell, room, furnitureRotation, onCellChange, onPlaceFurniture, onSelectFurniture, getFurnitureAt])
+  }, [tool, selectedTemplateId, ghostCell, room, furnitureRotation, onCellChange, onPlaceFurniture, onSelectFurniture, getFurnitureAt, onInteractionStart])
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const cell = getCellFromEvent(e)

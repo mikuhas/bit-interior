@@ -5,12 +5,12 @@ export interface BitSettings {
   unit: BitUnit
 }
 
-export type CellType = 'empty' | 'floor' | 'wall' | 'wallX' | 'wallY' | 'door' | 'window'
+export type CellType = 'empty' | 'floor' | 'autoFloor' | 'wall' | 'wallX' | 'wallY' | 'door' | 'window'
 
 // 'furniture' は家具配置モード(テンプレートを選んでキャンバス上で配置)
 export type EditTool = 'floor' | 'wallX' | 'wallY' | 'door' | 'window' | 'erase' | 'select' | 'furniture'
 
-export type ViewMode = 'topdown' | 'isometric'
+export type ViewMode = 'topdown' | 'isometric' | 'blueprint'
 
 export interface FurnitureTemplate {
   id: string

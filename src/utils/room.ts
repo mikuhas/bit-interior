@@ -1,6 +1,35 @@
 import { RoomState, CellType, FurnitureTemplate, PlacedFurniture } from '../types'
 import { getTemplate } from '../data/furniture'
 
+const WALL_TYPES = new Set<CellType>(['wall', 'wallX', 'wallY', 'door', 'window'])
+
+export function detectAutoFloor(cells: CellType[][], width: number, height: number): CellType[][] {
+  const reachable: boolean[][] = Array.from({ length: height }, () => Array(width).fill(false))
+  const queue: [number, number][] = []
+  for (let r = 0; r < height; r++) {
+    for (let c = 0; c < width; c++) {
+      if ((r === 0 || r === height - 1 || c === 0 || c === width - 1) && !WALL_TYPES.has(cells[r][c])) {
+        reachable[r][c] = true
+        queue.push([r, c])
+      }
+    }
+  }
+  while (queue.length > 0) {
+    const [r, c] = queue.shift()!
+    for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as [number, number][]) {
+      const nr = r + dr, nc = c + dc
+      if (nr < 0 || nr >= height || nc < 0 || nc >= width || reachable[nr][nc] || WALL_TYPES.has(cells[nr][nc])) continue
+      reachable[nr][nc] = true
+      queue.push([nr, nc])
+    }
+  }
+  return cells.map((row, r) => row.map((cell, c) => {
+    if (WALL_TYPES.has(cell)) return cell
+    if (!reachable[r][c]) return cell === 'empty' ? 'autoFloor' : cell
+    return cell === 'autoFloor' ? 'empty' : cell
+  }))
+}
+
 export function rotateShape(shape: boolean[][], rotation: 0 | 1 | 2 | 3): boolean[][] {
   let result = shape
   for (let i = 0; i < rotation; i++) {
@@ -80,7 +109,7 @@ export function canPlaceFurniture(
       const row = y + r
       const col = x + c
       if (row < 0 || row >= room.height || col < 0 || col >= room.width) return false
-      if (room.cells[row][col] !== 'floor') return false
+      if (room.cells[row][col] !== 'floor' && room.cells[row][col] !== 'autoFloor') return false
       if (occupiedSet.has(`${row},${col}`)) return false
     }
   }

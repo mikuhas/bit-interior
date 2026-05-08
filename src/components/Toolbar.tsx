@@ -104,10 +104,17 @@ export default function Toolbar({
         >
           ISO
         </button>
+        <button
+          className={`pixel-btn ${viewMode === 'blueprint' ? 'view-active' : ''}`}
+          onClick={() => setViewMode('blueprint')}
+          title="図面モード"
+        >
+          PLAN
+        </button>
       </div>
 
-      {/* 編集ツール (BEVモードのみ) */}
-      {viewMode === 'topdown' && (
+      {/* 編集ツール (BEV・図面モード) */}
+      {(viewMode === 'topdown' || viewMode === 'blueprint') && (
         <>
           <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
           <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>

@@ -204,7 +204,7 @@ export default function IsometricView({ room, darkMode=true }: Props) {
         if(!shape[r][c]) continue
         const gr=pf.y+r; const gc=pf.x+c
         if(gr<0||gr>=room.height||gc<0||gc>=room.width) continue
-        if(room.cells[gr][gc]!=='floor') continue
+        if(room.cells[gr][gc]!=='floor'&&room.cells[gr][gc]!=='autoFloor') continue
         furnitureCellMap.set(`${gr},${gc}`,{
           color:effectiveColor,topColor:effectiveTopColor,height:tmpl.height,z,
           templateId:tmpl.id,instanceId:pf.instanceId,
@@ -229,7 +229,7 @@ export default function IsometricView({ room, darkMode=true }: Props) {
     for(const{row,col} of allCells){
       const cell=room.cells[row][col]
       if(cell==='empty') continue
-      if(cell==='floor'||cell==='wallX'||cell==='wallY'){
+      if(cell==='floor'||cell==='autoFloor'||cell==='wallX'||cell==='wallY'){
         const{x,y}=toScreen(col,row)
         ctx.beginPath()
         ctx.moveTo(x,y);ctx.lineTo(x+TILE_W/2,y+TILE_H/2);ctx.lineTo(x,y+TILE_H);ctx.lineTo(x-TILE_W/2,y+TILE_H/2)
@@ -305,7 +305,57 @@ export default function IsometricView({ room, darkMode=true }: Props) {
         isoRect(ctx,x,y,h,0.9,0,1,1,wTop)
       }
 
-      if(cell==='floor'){
+      // コーナーピラー: wallX と wallY が隣接する交差点に 0.1×0.1 の柱
+      if(cell==='wallX'||cell==='wallY'){
+        const h=wallH
+        const wc=wallColor
+        const pTop=shade(wc,1.55); const pLeft=shade(wc,0.82); const pRight=shade(wc,0.65)
+        const isWX=(r:number,c:number)=>r>=0&&r<room.height&&c>=0&&c<room.width&&room.cells[r][c]==='wallX'
+        const isWY=(r:number,c:number)=>r>=0&&r<room.height&&c>=0&&c<room.width&&room.cells[r][c]==='wallY'
+        const P=TILE_W/2*0.1; const PH=TILE_H/2*0.1
+        // wallX の左端(col-1がwallY)または右端(col+1がwallY)にピラー
+        if(cell==='wallX'){
+          if(isWY(row,col-1)){
+            // 左端ピラー: u=0,v=0.9..1 → 簡易描画
+            const[ax,ay]=isoUV(x,y,0,0,0.9); const[bx,by]=isoUV(x,y,0,0.1,0.9)
+            const[cx2,cy2]=isoUV(x,y,0,0.1,1); const[dx,dy]=isoUV(x,y,0,0,1)
+            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.closePath()
+            ctx.fillStyle=pTop;ctx.fill()
+            ctx.beginPath();ctx.moveTo(dx,dy);ctx.lineTo(cx2,cy2);ctx.lineTo(cx2,cy2-h);ctx.lineTo(dx,dy-h);ctx.closePath()
+            ctx.fillStyle=pRight;ctx.fill()
+          }
+          if(isWY(row,col+1)){
+            // 右端ピラー: u=0.9..1,v=0.9..1
+            const[ax,ay]=isoUV(x,y,0,0.9,0.9); const[bx,by]=isoUV(x,y,0,1,0.9)
+            const[cx2,cy2]=isoUV(x,y,0,1,1); const[dx,dy]=isoUV(x,y,0,0.9,1)
+            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.closePath()
+            ctx.fillStyle=pTop;ctx.fill()
+            ctx.beginPath();ctx.moveTo(cx2,cy2);ctx.lineTo(bx,by);ctx.lineTo(bx,by-h);ctx.lineTo(cx2,cy2-h);ctx.closePath()
+            ctx.fillStyle=pLeft;ctx.fill()
+          }
+        }
+        // wallY の上端(row-1がwallX)または下端(row+1がwallX)にピラー
+        if(cell==='wallY'){
+          if(isWX(row-1,col)){
+            const[ax,ay]=isoUV(x,y,0,0.9,0); const[bx,by]=isoUV(x,y,0,1,0)
+            const[cx2,cy2]=isoUV(x,y,0,1,0.1); const[dx,dy]=isoUV(x,y,0,0.9,0.1)
+            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.closePath()
+            ctx.fillStyle=pTop;ctx.fill()
+            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(dx,dy);ctx.lineTo(dx,dy-h);ctx.lineTo(ax,ay-h);ctx.closePath()
+            ctx.fillStyle=pLeft;ctx.fill()
+          }
+          if(isWX(row+1,col)){
+            const[ax,ay]=isoUV(x,y,0,0.9,0.9); const[bx,by]=isoUV(x,y,0,1,0.9)
+            const[cx2,cy2]=isoUV(x,y,0,1,1); const[dx,dy]=isoUV(x,y,0,0.9,1)
+            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.closePath()
+            ctx.fillStyle=pTop;ctx.fill()
+            ctx.beginPath();ctx.moveTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.lineTo(dx,dy-h);ctx.lineTo(cx2,cy2-h);ctx.closePath()
+            ctx.fillStyle=pRight;ctx.fill()
+          }
+        }
+      }
+
+      if(cell==='floor'||cell==='autoFloor'){
         const fc=furnitureCellMap.get(`${row},${col}`)
         if(!fc) continue
         const cubeH=fc.height*18; const zOff=fc.screenZOff; const baseY=y-zOff
