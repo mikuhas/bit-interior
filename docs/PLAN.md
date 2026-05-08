@@ -75,8 +75,13 @@
 
 ## 4. 実装タスク
 1. [x] `Wall` コンポーネントを `WallX`, `WallY` に分離し、厚みを 0.1 に変更。
-2. [ ] 家具の描画を `FurniturePrimitive` から `FurnitureAssembly (Group)` に変更。(IsoFurniture.tsx実装済み・IsometricViewはCanvas2Dのため未接続)
+2. [x] 家具マルチボクセル化: IsoFurniture.tsx に BedS/BedD/Chair/Desk/DiningTable/CoffeeTable/Sofa/Bookshelf/Wardrobe/TvStand/Plant/Bathtub/Toilet 実装済み (z=0.01オフセット対応) / IsometricViewはCanvas2Dのため未接続
 3. [x] `react-isometric` の `Cube` プロパティへ動的にカラーシェーディングを適用する関数を実装。(IsoFurniture.tsx: adjustBrightness)
 4. [x] 壁（WallX, WallY）によって閉鎖された空間を検出し、その内部に自動で Floor コンポーネントを配置・削除するロジックを実装する。
 5. [x] モード切替で家具を文字で表記する図面モードを追加したい
 6. [x] ctrl + zでひとつ前の操作に戻せるようにしたい。編集の中で、クリックを始めてから話すまでを一つの操作とみなす。
+7. [x] 壁の辺指定機能: WALLツール選択時にセルをクリック→辺選択モーダル表示→選択辺にエッジ壁設置
+   - CellType追加: wallTop / wallRight / wallBottom / wallLeft
+   - EditTool: wallX/wallY → wall (一本化)
+   - WallEdgeModal.tsx: 正方形UIで4辺をクリック選択
+   - TopDownCanvas: wall tool対応 + 新CellType描画

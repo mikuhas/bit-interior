@@ -10,6 +10,7 @@ interface Props {
   tool: EditTool
   selectedTemplateId: string | null
   furnitureRotation: 0 | 1 | 2 | 3
+  doorRotation: 0 | 1 | 2 | 3
   selectedInstanceId: string | null
   onCellChange: (row: number, col: number, type: CellType) => void
   onPlaceFurniture: (f: PlacedFurniture) => void
@@ -62,33 +63,22 @@ function drawCell(
     return
   }
 
-  if (type === 'door') {
-    // 壁ベース
-    ctx.fillStyle = '#3d4160'
-    ctx.fillRect(x, y, cellSize, cellSize)
-    ctx.fillStyle = '#5a6080'
-    ctx.fillRect(x, y, cellSize, 4)
-    ctx.fillStyle = '#4d5170'
-    ctx.fillRect(x, y, 4, cellSize)
-    ctx.fillStyle = '#252840'
-    ctx.fillRect(x, y + cellSize - 4, cellSize, 4)
-    ctx.fillStyle = '#2d3050'
-    ctx.fillRect(x + cellSize - 4, y, 4, cellSize)
-    // 開口部（床色）
-    ctx.fillStyle = '#1e3357'
-    ctx.fillRect(x + 4, y + 4, cellSize - 8, cellSize - 8)
-    // 扉パネル＋弧（間取り図スタイル）
+  if (type === 'door' || type === 'door90' || type === 'door180' || type === 'door270') {
+    const rot = type === 'door' ? 0 : type === 'door90' ? 1 : type === 'door180' ? 2 : 3
+    ctx.fillStyle = '#3d4160'; ctx.fillRect(x, y, cellSize, cellSize)
+    ctx.fillStyle = '#5a6080'; ctx.fillRect(x, y, cellSize, 4)
+    ctx.fillStyle = '#4d5170'; ctx.fillRect(x, y, 4, cellSize)
+    ctx.fillStyle = '#252840'; ctx.fillRect(x, y + cellSize - 4, cellSize, 4)
+    ctx.fillStyle = '#2d3050'; ctx.fillRect(x + cellSize - 4, y, 4, cellSize)
     ctx.save()
-    ctx.strokeStyle = '#e8c050'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.moveTo(x + 4, y + 4)
-    ctx.lineTo(x + cellSize - 4, y + 4)
-    ctx.stroke()
+    ctx.translate(x + cellSize / 2, y + cellSize / 2)
+    ctx.rotate((rot * Math.PI) / 2)
+    ctx.translate(-(x + cellSize / 2), -(y + cellSize / 2))
+    ctx.fillStyle = '#1e3357'; ctx.fillRect(x + 4, y + 4, cellSize - 8, cellSize - 8)
+    ctx.strokeStyle = '#e8c050'; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + cellSize - 4, y + 4); ctx.stroke()
     ctx.lineWidth = 1.5
-    ctx.beginPath()
-    ctx.arc(x + 4, y + 4, cellSize - 8, 0, Math.PI / 2)
-    ctx.stroke()
+    ctx.beginPath(); ctx.arc(x + 4, y + 4, cellSize - 8, 0, Math.PI / 2); ctx.stroke()
     ctx.restore()
     return
   }
@@ -124,21 +114,59 @@ function drawCell(
     return
   }
 
-  if (type === 'wallX') {
+  if (type === 'wallX' || type === 'wallBottom') {
     ctx.fillStyle = '#1a2d50'; ctx.fillRect(x, y, cellSize, cellSize)
     ctx.fillStyle = '#1e3357'; ctx.fillRect(x+2, y+2, cellSize-4, cellSize-4)
+    ctx.strokeStyle = '#0d1535'; ctx.lineWidth = 1; ctx.strokeRect(x+0.5, y+0.5, cellSize-1, cellSize-1)
     const th = Math.max(4, Math.round(cellSize * 0.1))
     ctx.fillStyle = '#3d4160'; ctx.fillRect(x, y+cellSize-th, cellSize, th)
     ctx.fillStyle = '#5a6080'; ctx.fillRect(x, y+cellSize-th, cellSize, 2)
     return
   }
 
-  if (type === 'wallY') {
+  if (type === 'wallY' || type === 'wallRight') {
     ctx.fillStyle = '#1a2d50'; ctx.fillRect(x, y, cellSize, cellSize)
     ctx.fillStyle = '#1e3357'; ctx.fillRect(x+2, y+2, cellSize-4, cellSize-4)
+    ctx.strokeStyle = '#0d1535'; ctx.lineWidth = 1; ctx.strokeRect(x+0.5, y+0.5, cellSize-1, cellSize-1)
     const th = Math.max(4, Math.round(cellSize * 0.1))
     ctx.fillStyle = '#3d4160'; ctx.fillRect(x+cellSize-th, y, th, cellSize)
     ctx.fillStyle = '#5a6080'; ctx.fillRect(x+cellSize-th, y, 2, cellSize)
+    return
+  }
+
+  if (type === 'wallTop') {
+    ctx.fillStyle = '#1a2d50'; ctx.fillRect(x, y, cellSize, cellSize)
+    ctx.fillStyle = '#1e3357'; ctx.fillRect(x+2, y+2, cellSize-4, cellSize-4)
+    ctx.strokeStyle = '#0d1535'; ctx.lineWidth = 1; ctx.strokeRect(x+0.5, y+0.5, cellSize-1, cellSize-1)
+    const th = Math.max(4, Math.round(cellSize * 0.1))
+    ctx.fillStyle = '#3d4160'; ctx.fillRect(x, y, cellSize, th)
+    ctx.fillStyle = '#252840'; ctx.fillRect(x, y+th-2, cellSize, 2)
+    return
+  }
+
+  if (type === 'wallLeft') {
+    ctx.fillStyle = '#1a2d50'; ctx.fillRect(x, y, cellSize, cellSize)
+    ctx.fillStyle = '#1e3357'; ctx.fillRect(x+2, y+2, cellSize-4, cellSize-4)
+    ctx.strokeStyle = '#0d1535'; ctx.lineWidth = 1; ctx.strokeRect(x+0.5, y+0.5, cellSize-1, cellSize-1)
+    const th = Math.max(4, Math.round(cellSize * 0.1))
+    ctx.fillStyle = '#3d4160'; ctx.fillRect(x, y, th, cellSize)
+    ctx.fillStyle = '#4d5170'; ctx.fillRect(x, y, 2, cellSize)
+    return
+  }
+
+  if (type === 'wallTopRight' || type === 'wallTopLeft' || type === 'wallBottomRight' || type === 'wallBottomLeft') {
+    ctx.fillStyle = '#1a2d50'; ctx.fillRect(x, y, cellSize, cellSize)
+    ctx.fillStyle = '#1e3357'; ctx.fillRect(x+2, y+2, cellSize-4, cellSize-4)
+    ctx.strokeStyle = '#0d1535'; ctx.lineWidth = 1; ctx.strokeRect(x+0.5, y+0.5, cellSize-1, cellSize-1)
+    const th = Math.max(4, Math.round(cellSize * 0.1))
+    const top    = type === 'wallTopRight' || type === 'wallTopLeft'
+    const bottom = type === 'wallBottomRight' || type === 'wallBottomLeft'
+    const right  = type === 'wallTopRight' || type === 'wallBottomRight'
+    const left   = type === 'wallTopLeft' || type === 'wallBottomLeft'
+    if (top)    { ctx.fillStyle = '#3d4160'; ctx.fillRect(x, y, cellSize, th); ctx.fillStyle = '#252840'; ctx.fillRect(x, y+th-2, cellSize, 2) }
+    if (bottom) { ctx.fillStyle = '#3d4160'; ctx.fillRect(x, y+cellSize-th, cellSize, th); ctx.fillStyle = '#5a6080'; ctx.fillRect(x, y+cellSize-th, cellSize, 2) }
+    if (right)  { ctx.fillStyle = '#3d4160'; ctx.fillRect(x+cellSize-th, y, th, cellSize); ctx.fillStyle = '#5a6080'; ctx.fillRect(x+cellSize-th, y, 2, cellSize) }
+    if (left)   { ctx.fillStyle = '#3d4160'; ctx.fillRect(x, y, th, cellSize); ctx.fillStyle = '#4d5170'; ctx.fillRect(x, y, 2, cellSize) }
     return
   }
 }
@@ -472,6 +500,7 @@ export default function TopDownCanvas({
   tool,
   selectedTemplateId,
   furnitureRotation,
+  doorRotation,
   selectedInstanceId,
   onCellChange,
   onPlaceFurniture,
@@ -485,7 +514,6 @@ export default function TopDownCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null)
   const [ghostCell, setGhostCell] = useState<{ x: number; y: number } | null>(null)
-
   const mouseDownRef = useRef(false)
   const paintTypeRef = useRef<CellType>('floor')
   const draggingRef = useRef<{ instanceId: string; offsetX: number; offsetY: number } | null>(null)
@@ -634,14 +662,29 @@ export default function TopDownCanvas({
       }
     }
 
+    // Ghost door preview
+    if (tool === 'door' && hoverCell) {
+      const doorType = (['door','door90','door180','door270'] as CellType[])[doorRotation]
+      ctx.save()
+      ctx.globalAlpha = 0.45
+      drawCell(ctx, hoverCell.col, hoverCell.row, doorType, CELL_SIZE)
+      ctx.globalAlpha = 0.85
+      ctx.strokeStyle = '#e8c050'
+      ctx.lineWidth = 2
+      ctx.setLineDash([4, 2])
+      ctx.strokeRect(hoverCell.col * CELL_SIZE + 1, hoverCell.row * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2)
+      ctx.setLineDash([])
+      ctx.restore()
+    }
+
     // Hover highlight
-    if (hoverCell && tool !== 'furniture') {
+    if (hoverCell && tool !== 'furniture' && tool !== 'door') {
       const px = hoverCell.col * CELL_SIZE
       const py = hoverCell.row * CELL_SIZE
       ctx.fillStyle = 'rgba(255,255,255,0.07)'
       ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE)
     }
-  }, [room, hoverCell, ghostCell, tool, selectedTemplateId, furnitureRotation, selectedInstanceId, canvasWidth, canvasHeight, blueprintMode])
+  }, [room, hoverCell, ghostCell, tool, selectedTemplateId, furnitureRotation, doorRotation, selectedInstanceId, canvasWidth, canvasHeight, blueprintMode])
 
   const getCellFromEvent = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
@@ -675,13 +718,21 @@ export default function TopDownCanvas({
     onInteractionStart?.()
     const { row, col } = cell
 
-    if (tool === 'floor' || tool === 'wallX' || tool === 'wallY' || tool === 'door' || tool === 'window' || tool === 'erase') {
+    if (tool === 'floor' || tool === 'wallX' || tool === 'wallY' || tool === 'wallTop' || tool === 'wallRight' || tool === 'wallBottom' || tool === 'wallLeft' || tool === 'wallTopRight' || tool === 'wallTopLeft' || tool === 'wallBottomRight' || tool === 'wallBottomLeft' || tool === 'door' || tool === 'window' || tool === 'erase') {
       mouseDownRef.current = true
       const newType: CellType =
         tool === 'floor' ? 'floor'
         : tool === 'wallX' ? 'wallX'
         : tool === 'wallY' ? 'wallY'
-        : tool === 'door' ? 'door'
+        : tool === 'wallTop' ? 'wallTop'
+        : tool === 'wallRight' ? 'wallRight'
+        : tool === 'wallBottom' ? 'wallBottom'
+        : tool === 'wallLeft' ? 'wallLeft'
+        : tool === 'wallTopRight' ? 'wallTopRight'
+        : tool === 'wallTopLeft' ? 'wallTopLeft'
+        : tool === 'wallBottomRight' ? 'wallBottomRight'
+        : tool === 'wallBottomLeft' ? 'wallBottomLeft'
+        : tool === 'door' ? (['door','door90','door180','door270'] as CellType[])[doorRotation]
         : tool === 'window' ? 'window'
         : 'empty'
       paintTypeRef.current = newType
@@ -719,7 +770,7 @@ export default function TopDownCanvas({
         onSelectFurniture(null)
       }
     }
-  }, [tool, selectedTemplateId, ghostCell, room, furnitureRotation, onCellChange, onPlaceFurniture, onSelectFurniture, getFurnitureAt, onInteractionStart])
+  }, [tool, selectedTemplateId, ghostCell, room, furnitureRotation, doorRotation, onCellChange, onPlaceFurniture, onSelectFurniture, getFurnitureAt, onInteractionStart])
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const cell = getCellFromEvent(e)
@@ -737,7 +788,7 @@ export default function TopDownCanvas({
       setGhostCell(null)
     }
 
-    if (mouseDownRef.current && (tool === 'floor' || tool === 'wallX' || tool === 'wallY' || tool === 'door' || tool === 'window' || tool === 'erase')) {
+    if (mouseDownRef.current && (tool === 'floor' || tool === 'wallX' || tool === 'wallY' || tool === 'wallTop' || tool === 'wallRight' || tool === 'wallBottom' || tool === 'wallLeft' || tool === 'wallTopRight' || tool === 'wallTopLeft' || tool === 'wallBottomRight' || tool === 'wallBottomLeft' || tool === 'door' || tool === 'window' || tool === 'erase')) {
       onCellChange(row, col, paintTypeRef.current)
     }
 

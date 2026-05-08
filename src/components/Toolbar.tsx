@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { ViewMode, EditTool, BitSettings } from '../types'
 
 interface Props {
@@ -7,6 +7,7 @@ interface Props {
   tool: EditTool
   setTool: (t: EditTool) => void
   furnitureRotation: 0 | 1 | 2 | 3
+  doorRotation: 0 | 1 | 2 | 3
   onRotate: () => void
   selectedInstanceId: string | null
   onDeleteSelected: () => void
@@ -20,12 +21,11 @@ interface Props {
   onOpenSettings: () => void
   darkMode: boolean
   onToggleDarkMode: () => void
+  onToggleHelp: () => void
 }
 
-const TOOLS: { id: EditTool; label: string }[] = [
+const BASE_TOOLS: { id: EditTool; label: string }[] = [
   { id: 'floor', label: 'FLOOR' },
-  { id: 'wallX', label: 'W-X' },
-  { id: 'wallY', label: 'W-Y' },
   { id: 'door', label: 'DOOR' },
   { id: 'window', label: 'WIN' },
   { id: 'erase', label: 'ERASE' },
@@ -33,7 +33,38 @@ const TOOLS: { id: EditTool; label: string }[] = [
   { id: 'furniture', label: 'PLACE' },
 ]
 
+const WALL_TOOLS: EditTool[] = ['wallTop', 'wallRight', 'wallBottom', 'wallLeft', 'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft']
+
+const WALL_ICON: Partial<Record<EditTool, string>> = {
+  wallTop: '▲', wallRight: '▶', wallBottom: '▼', wallLeft: '◀',
+  wallTopRight: '◥', wallTopLeft: '◤', wallBottomRight: '◢', wallBottomLeft: '◣',
+}
+
 const ROTATION_LABELS = ['0°', '90°', '180°', '270°']
+
+function WallEdgeBtn({ id, label, active, onClick }: { id: string; label: string; active: boolean; onClick: () => void }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        width: 20, height: 20,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: active ? '#4a4e69' : '#2a2a4a',
+        border: `1px solid ${active ? '#8888cc' : '#4a4e69'}`,
+        color: active ? '#ffffff' : '#9090bb',
+        fontSize: 8,
+        cursor: 'pointer',
+        fontFamily: "'Press Start 2P', monospace",
+        userSelect: 'none',
+        lineHeight: 1,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#3a3a60'; e.currentTarget.style.color = '#c0c0e0' } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = '#2a2a4a'; e.currentTarget.style.color = '#9090bb' } }}
+    >
+      {label}
+    </div>
+  )
+}
 
 export default function Toolbar({
   viewMode,
@@ -41,6 +72,7 @@ export default function Toolbar({
   tool,
   setTool,
   furnitureRotation,
+  doorRotation,
   onRotate,
   selectedInstanceId,
   onDeleteSelected,
@@ -54,8 +86,28 @@ export default function Toolbar({
   onOpenSettings,
   darkMode,
   onToggleDarkMode,
+  onToggleHelp,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const wallBtnRef = useRef<HTMLDivElement>(null)
+  const [showWallPicker, setShowWallPicker] = useState(false)
+  const [pickerPos, setPickerPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const isWallActive = WALL_TOOLS.includes(tool)
+
+  useEffect(() => {
+    if (!isWallActive) setShowWallPicker(false)
+  }, [isWallActive])
+
+  useEffect(() => {
+    if (!showWallPicker) return
+    const handler = (e: MouseEvent) => {
+      if (wallBtnRef.current && !wallBtnRef.current.contains(e.target as Node)) {
+        setShowWallPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showWallPicker])
 
   return (
     <div
@@ -117,8 +169,55 @@ export default function Toolbar({
       {(viewMode === 'topdown' || viewMode === 'blueprint') && (
         <>
           <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
-          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-            {TOOLS.map(t => (
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+            {/* FLOOR */}
+            <button
+              className={`pixel-btn ${tool === 'floor' ? 'active' : ''}`}
+              onClick={() => setTool('floor')}
+            >FLOOR</button>
+
+            {/* WALL + picker */}
+            <div ref={wallBtnRef}>
+              <button
+                className={`pixel-btn ${isWallActive ? 'active' : ''}`}
+                onClick={() => {
+                  if (!showWallPicker && wallBtnRef.current) {
+                    const r = wallBtnRef.current.getBoundingClientRect()
+                    setPickerPos({ x: r.left, y: r.bottom + 4 })
+                  }
+                  setShowWallPicker(p => !p)
+                }}
+              >
+                WALL{isWallActive ? ` ${WALL_ICON[tool] ?? ''}` : ''}
+              </button>
+              {showWallPicker && (
+                <div style={{
+                  position: 'fixed',
+                  left: pickerPos.x,
+                  top: pickerPos.y,
+                  background: '#16162a',
+                  border: '2px solid #4a4e69',
+                  padding: 4,
+                  zIndex: 9999,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 20px)',
+                  gridTemplateRows: 'repeat(3, 20px)',
+                  gap: 2,
+                }}>
+                  <WallEdgeBtn id="wallTopLeft"     label="◤" active={tool === 'wallTopLeft'}     onClick={() => { setTool('wallTopLeft');     setShowWallPicker(false) }} />
+                  <WallEdgeBtn id="wallTop"          label="▲" active={tool === 'wallTop'}          onClick={() => { setTool('wallTop');          setShowWallPicker(false) }} />
+                  <WallEdgeBtn id="wallTopRight"    label="◥" active={tool === 'wallTopRight'}    onClick={() => { setTool('wallTopRight');    setShowWallPicker(false) }} />
+                  <WallEdgeBtn id="wallLeft"         label="◀" active={tool === 'wallLeft'}         onClick={() => { setTool('wallLeft');         setShowWallPicker(false) }} />
+                  <div style={{ background: '#0c0c1e', border: '1px dashed #3a3a5a' }} />
+                  <WallEdgeBtn id="wallRight"        label="▶" active={tool === 'wallRight'}        onClick={() => { setTool('wallRight');        setShowWallPicker(false) }} />
+                  <WallEdgeBtn id="wallBottomLeft"  label="◣" active={tool === 'wallBottomLeft'}  onClick={() => { setTool('wallBottomLeft');  setShowWallPicker(false) }} />
+                  <WallEdgeBtn id="wallBottom"       label="▼" active={tool === 'wallBottom'}       onClick={() => { setTool('wallBottom');       setShowWallPicker(false) }} />
+                  <WallEdgeBtn id="wallBottomRight" label="◢" active={tool === 'wallBottomRight'} onClick={() => { setTool('wallBottomRight'); setShowWallPicker(false) }} />
+                </div>
+              )}
+            </div>
+
+            {BASE_TOOLS.slice(1).map(t => (
               <button
                 key={t.id}
                 className={`pixel-btn ${tool === t.id ? 'active' : ''}`}
@@ -129,7 +228,7 @@ export default function Toolbar({
             ))}
           </div>
 
-          {tool === 'furniture' && (
+          {(tool === 'furniture' || tool === 'door') && (
             <>
               <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
               <button
@@ -138,7 +237,7 @@ export default function Toolbar({
                 data-tip="R key"
                 style={{ color: '#ffcc00', borderColor: '#ffcc00' }}
               >
-                ↻ {ROTATION_LABELS[furnitureRotation]}
+                ↻ {ROTATION_LABELS[tool === 'door' ? doorRotation : furnitureRotation]}
               </button>
             </>
           )}
@@ -233,6 +332,18 @@ export default function Toolbar({
         style={{ color: '#cc88ff', borderColor: '#7744aa' }}
       >
         ⚙ BIT
+      </button>
+
+      <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
+
+      {/* ショートカットヘルプ */}
+      <button
+        className="pixel-btn"
+        onClick={onToggleHelp}
+        title="Shortcut list (? key)"
+        style={{ color: '#88ccff', borderColor: '#446688' }}
+      >
+        ?
       </button>
 
       <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />

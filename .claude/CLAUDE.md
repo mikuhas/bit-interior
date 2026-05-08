@@ -21,6 +21,7 @@
 - 落とし穴: docs/architect.md の「isometric-react使用上の注意」必読
 ## R
 - PLAN.mdにTODOを書き出してから実装
+- 思考時間が5分を超える場合はPLAN.mdにメインタスクの下にサブタスクを書き出し
 - TODOは常に更新(LIMIT前必須)
 - 構成変更 → architect.md 更新
 ## O

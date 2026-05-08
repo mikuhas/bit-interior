@@ -8,6 +8,7 @@ import Toolbar from './Toolbar'
 import FurniturePanel from './FurniturePanel'
 import TopDownCanvas from './TopDownCanvas'
 import IsometricView from './IsometricView'
+import ShortcutHelp from './ShortcutHelp'
 
 interface Props {
   bitSettings: BitSettings
@@ -29,9 +30,11 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
   const [furnitureRotation, setFurnitureRotation] = useState<0 | 1 | 2 | 3>(0)
+  const [doorRotation, setDoorRotation] = useState<0 | 1 | 2 | 3>(0)
   const [saveExists, setSaveExists] = useState(() => hasSaveData())
   const [saveFlash, setSaveFlash] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [darkMode, setDarkMode] = useState(true)
   const [editBitSize, setEditBitSize] = useState(bitSettings.size)
   const [editBitUnit, setEditBitUnit] = useState<BitUnit>(bitSettings.unit)
@@ -40,20 +43,11 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
   const [editRoomW, setEditRoomW] = useState(initialWidth)
   const [editRoomH, setEditRoomH] = useState(initialHeight)
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault()
-        undo()
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [undo])
 
   const handleRotate = useCallback(() => {
-    setFurnitureRotation(prev => ((prev + 1) % 4) as 0 | 1 | 2 | 3)
-  }, [])
+    if (tool === 'door') setDoorRotation(prev => ((prev + 1) % 4) as 0 | 1 | 2 | 3)
+    else setFurnitureRotation(prev => ((prev + 1) % 4) as 0 | 1 | 2 | 3)
+  }, [tool])
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedInstanceId) {
@@ -110,6 +104,33 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
     setTimeout(() => setSaveFlash(false), 1200)
   }, [bitSettings, room])
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      const ctrl = e.ctrlKey || e.metaKey
+      if (ctrl && e.key === 'z') { e.preventDefault(); undo(); return }
+      if (ctrl && e.key === 's') { e.preventDefault(); handleSave(); return }
+      if (e.key === 'Escape') {
+        setSelectedInstanceId(null); setSelectedTemplateId(null); setShowHelp(false); return
+      }
+      if (e.key === '?') { setShowHelp(h => !h); return }
+      if (e.key === '1') { setViewMode('topdown'); return }
+      if (e.key === '2') { setViewMode('isometric'); return }
+      if (e.key === '3') { setViewMode('blueprint'); return }
+      const k = e.key.toLowerCase()
+      if (k === 'f') handleSetTool('floor')
+      else if (k === 'w') handleSetTool('wallBottom')
+      else if (k === 'd') handleSetTool('door')
+      else if (k === 'n') handleSetTool('window')
+      else if (k === 'e') handleSetTool('erase')
+      else if (k === 's' && !ctrl) handleSetTool('select')
+      else if (k === 'p') handleSetTool('furniture')
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [undo, handleSave, handleSetTool])
+
   const handleLoad = useCallback(() => {
     const data = loadFromLocalStorage()
     if (data) {
@@ -155,12 +176,13 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
       <Toolbar
         viewMode={viewMode} setViewMode={setViewMode}
         tool={tool} setTool={handleSetTool}
-        furnitureRotation={furnitureRotation} onRotate={handleRotate}
+        furnitureRotation={furnitureRotation} doorRotation={doorRotation} onRotate={handleRotate}
         selectedInstanceId={selectedInstanceId} onDeleteSelected={handleDeleteSelected}
         bitSettings={bitSettings} roomSize={{ width: room.width, height: room.height }}
         onSave={handleSave} onLoad={handleLoad} onExport={handleExport} onImport={handleImport}
         hasSave={saveExists} onOpenSettings={handleOpenSettings}
         darkMode={darkMode} onToggleDarkMode={() => setDarkMode(d => !d)}
+        onToggleHelp={() => setShowHelp(h => !h)}
       />
 
       {/* ビット設定パネル */}
@@ -264,6 +286,8 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
         </div>
       )}
 
+      {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
+
       {/* Save flash */}
       {saveFlash && (
         <div style={{
@@ -304,6 +328,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
               room={room} tool={tool}
               selectedTemplateId={selectedTemplateId}
               furnitureRotation={furnitureRotation}
+              doorRotation={doorRotation}
               selectedInstanceId={selectedInstanceId}
               onCellChange={handleCellChange}
               onPlaceFurniture={handlePlaceFurniture}

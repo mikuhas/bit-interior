@@ -1,7 +1,7 @@
 import { RoomState, CellType, FurnitureTemplate, PlacedFurniture } from '../types'
 import { getTemplate } from '../data/furniture'
 
-const WALL_TYPES = new Set<CellType>(['wall', 'wallX', 'wallY', 'door', 'window'])
+const WALL_TYPES = new Set<CellType>(['wall', 'wallX', 'wallY', 'wallTop', 'wallRight', 'wallBottom', 'wallLeft', 'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft', 'door', 'door90', 'door180', 'door270', 'window'])
 
 export function detectAutoFloor(cells: CellType[][], width: number, height: number): CellType[][] {
   const reachable: boolean[][] = Array.from({ length: height }, () => Array(width).fill(false))
@@ -121,7 +121,7 @@ export function createInitialRoom(width: number, height: number): RoomState {
   for (let r = 0; r < height; r++) {
     const row: CellType[] = []
     for (let c = 0; c < width; c++) {
-      row.push(r === 0 || r === height - 1 || c === 0 || c === width - 1 ? 'wall' : 'floor')
+      row.push('floor')
     }
     cells.push(row)
   }
