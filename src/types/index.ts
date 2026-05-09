@@ -5,10 +5,22 @@ export interface BitSettings {
   unit: BitUnit
 }
 
-export type CellType = 'empty' | 'floor' | 'autoFloor' | 'wall' | 'wallX' | 'wallY' | 'wallTop' | 'wallRight' | 'wallBottom' | 'wallLeft' | 'wallTopRight' | 'wallTopLeft' | 'wallBottomRight' | 'wallBottomLeft' | 'door' | 'door90' | 'door180' | 'door270' | 'window'
+export type CellType = 'empty' | 'floor' | 'autoFloor' | 'wall' | 'wallX' | 'wallY' 
+  | 'wallTop' | 'wallRight' | 'wallBottom' | 'wallLeft' 
+  | 'wallTopRight' | 'wallTopLeft' | 'wallBottomRight' | 'wallBottomLeft'
+  | 'wallTopBottom' | 'wallLeftRight' // 2-edge parallel
+  | 'wallTopRightBottom' | 'wallRightBottomLeft' | 'wallBottomLeftTop' | 'wallLeftTopRight' // 3-edge
+  | 'wallFull' // 4-edge
+  | 'door' | 'door90' | 'door180' | 'door270' | 'window'
 
 // 'furniture' は家具配置モード(テンプレートを選んでキャンバス上で配置)
-export type EditTool = 'floor' | 'wallX' | 'wallY' | 'wallTop' | 'wallRight' | 'wallBottom' | 'wallLeft' | 'wallTopRight' | 'wallTopLeft' | 'wallBottomRight' | 'wallBottomLeft' | 'door' | 'window' | 'erase' | 'select' | 'furniture'
+export type EditTool = 'floor' | 'wallX' | 'wallY' 
+  | 'wallTop' | 'wallRight' | 'wallBottom' | 'wallLeft' 
+  | 'wallTopRight' | 'wallTopLeft' | 'wallBottomRight' | 'wallBottomLeft'
+  | 'wallTopBottom' | 'wallLeftRight'
+  | 'wallTopRightBottom' | 'wallRightBottomLeft' | 'wallBottomLeftTop' | 'wallLeftTopRight'
+  | 'wallFull'
+  | 'door' | 'window' | 'erase' | 'select' | 'furniture'
 
 export type ViewMode = 'topdown' | 'isometric' | 'blueprint'
 

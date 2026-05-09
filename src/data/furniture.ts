@@ -5,7 +5,7 @@ import { FurnitureTemplate } from '../types'
 export const FURNITURE_TEMPLATES: FurnitureTemplate[] = [
   {
     id: 'bed-s',
-    nameJa: 'ベッド(S)',
+    nameJa: 'シングルベッド',
     emoji: '🛏',
     shape: [
       [true, true],
@@ -13,13 +13,13 @@ export const FURNITURE_TEMPLATES: FurnitureTemplate[] = [
       [true, true],
     ],
     color: '#4a6090',
-    topColor: '#e8d8b8',  // マットレス面
+    topColor: '#e8d8b8',
     sideColor: '#2a3a60',
     height: 1.5,
   },
   {
     id: 'bed-d',
-    nameJa: 'ベッド(D)',
+    nameJa: 'ダブルベッド',
     emoji: '🛏',
     shape: [
       [true, true, true],
@@ -42,11 +42,11 @@ export const FURNITURE_TEMPLATES: FurnitureTemplate[] = [
     color: '#6a4828',
     topColor: '#9a7048',
     sideColor: '#3e2a14',
-    height: 3.0,
+    height: 1.2,
   },
   {
     id: 'desk',
-    nameJa: 'デスク',
+    nameJa: 'L字デスク',
     emoji: '🖥',
     shape: [
       [true, true, true],
@@ -59,7 +59,7 @@ export const FURNITURE_TEMPLATES: FurnitureTemplate[] = [
   },
   {
     id: 'chair',
-    nameJa: '椅子',
+    nameJa: 'オフィスチェア',
     emoji: '🪑',
     shape: [
       [true],
@@ -171,7 +171,49 @@ export const FURNITURE_TEMPLATES: FurnitureTemplate[] = [
     sideColor: '#9898a8',
     height: 2.0,
   },
+  {
+    id: 'fridge',
+    nameJa: '冷蔵庫',
+    emoji: '🧊',
+    shape: [[true]],
+    color: '#d0d8e0',
+    topColor: '#eef4f8',
+    sideColor: '#aab4be',
+    height: 5.5,
+  },
+  {
+    id: 'kitchen',
+    nameJa: 'キッチン',
+    emoji: '🍳',
+    shape: [[true, true]],
+    color: '#e0e0e0',
+    topColor: '#f5f5f5',
+    sideColor: '#b0b0b0',
+    height: 2.8,
+  },
+  {
+    id: 'chest',
+    nameJa: 'チェスト',
+    emoji: '📂',
+    shape: [[true, true]],
+    color: '#7a5030',
+    topColor: '#9a6a48',
+    sideColor: '#4e2a14',
+    height: 2.0,
+  },
+  {
+    id: 'armchair',
+    nameJa: 'アームチェア',
+    emoji: '🛋',
+    shape: [[true]],
+    color: '#6a4828',
+    topColor: '#9a7048',
+    sideColor: '#3e2a14',
+    height: 1.2,
+  },
 ]
+
+
 
 export function getTemplate(id: string): FurnitureTemplate | undefined {
   return FURNITURE_TEMPLATES.find(t => t.id === id)

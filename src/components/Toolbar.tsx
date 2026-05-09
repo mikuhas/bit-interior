@@ -35,33 +35,126 @@ const BASE_TOOLS: { id: EditTool; label: string }[] = [
 
 const WALL_TOOLS: EditTool[] = ['wallTop', 'wallRight', 'wallBottom', 'wallLeft', 'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft']
 
-const WALL_ICON: Partial<Record<EditTool, string>> = {
-  wallTop: '▲', wallRight: '▶', wallBottom: '▼', wallLeft: '◀',
-  wallTopRight: '◥', wallTopLeft: '◤', wallBottomRight: '◢', wallBottomLeft: '◣',
+// エッジの組み合わせからCellTypeへのマッピング (全パターン)
+const EDGE_MAP: Record<string, EditTool> = {
+  'top': 'wallTop',
+  'right': 'wallRight',
+  'bottom': 'wallBottom',
+  'left': 'wallLeft',
+  'top,right': 'wallTopRight',
+  'top,left': 'wallTopLeft',
+  'bottom,right': 'wallBottomRight',
+  'bottom,left': 'wallBottomLeft',
+  'top,bottom': 'wallTopBottom',
+  'right,left': 'wallLeftRight',
+  'top,right,bottom': 'wallTopRightBottom',
+  'right,bottom,left': 'wallRightBottomLeft',
+  'top,bottom,left': 'wallBottomLeftTop',
+  'top,right,left': 'wallLeftTopRight',
+  'top,right,bottom,left': 'wallFull',
 }
 
-const ROTATION_LABELS = ['0°', '90°', '180°', '270°']
+function WallEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: EditTool; onSelect: (t: EditTool) => void; onClose: () => void }) {
+  const [pos, setPos] = useState({ x: window.innerWidth / 2 - 75, y: window.innerHeight / 2 - 100 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStart = useRef({ x: 0, y: 0 })
 
-function WallEdgeBtn({ id, label, active, onClick }: { id: string; label: string; active: boolean; onClick: () => void }) {
+  const getSelectedEdges = (): string[] => {
+    if (currentTool === 'wallTop') return ['top']
+    if (currentTool === 'wallRight') return ['right']
+    if (currentTool === 'wallBottom') return ['bottom']
+    if (currentTool === 'wallLeft') return ['left']
+    if (currentTool === 'wallTopRight') return ['top', 'right']
+    if (currentTool === 'wallTopLeft') return ['top', 'left']
+    if (currentTool === 'wallBottomRight') return ['bottom', 'right']
+    if (currentTool === 'wallBottomLeft') return ['bottom', 'left']
+    if (currentTool === 'wallTopBottom') return ['top', 'bottom']
+    if (currentTool === 'wallLeftRight') return ['right', 'left']
+    if (currentTool === 'wallTopRightBottom') return ['top', 'right', 'bottom']
+    if (currentTool === 'wallRightBottomLeft') return ['right', 'bottom', 'left']
+    if (currentTool === 'wallBottomLeftTop') return ['top', 'bottom', 'left']
+    if (currentTool === 'wallLeftTopRight') return ['top', 'right', 'left']
+    if (currentTool === 'wallFull') return ['top', 'right', 'bottom', 'left']
+    return []
+  }
+
+  const selectedEdges = getSelectedEdges()
+
+  const toggleEdge = (edge: string) => {
+    let next: string[] = []
+    if (selectedEdges.includes(edge)) {
+      next = selectedEdges.filter(e => e !== edge)
+    } else {
+      next = [...selectedEdges, edge]
+    }
+    
+    if (next.length === 0) {
+      onSelect('floor')
+      return
+    }
+
+    const order = ['top', 'right', 'bottom', 'left']
+    const key = order.filter(o => next.includes(o)).join(',')
+    const tool = EDGE_MAP[key]
+    if (tool) onSelect(tool)
+  }
+
+  const btnStyle = (edge: string, baseStyle: React.CSSProperties): React.CSSProperties => ({
+    ...baseStyle,
+    position: 'absolute',
+    cursor: 'pointer',
+    background: selectedEdges.includes(edge) ? '#00ff88' : '#2a2a4a',
+    border: `2px solid ${selectedEdges.includes(edge) ? '#fff' : '#4a4e69'}`,
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '10px',
+    color: selectedEdges.includes(edge) ? '#000' : '#7878aa',
+    transition: 'all 0.15s ease',
+    boxShadow: selectedEdges.includes(edge) ? '0 0 10px rgba(0,255,136,0.5)' : 'none',
+  })
+
   return (
-    <div
-      onClick={onClick}
-      style={{
-        width: 20, height: 20,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: active ? '#4a4e69' : '#2a2a4a',
-        border: `1px solid ${active ? '#8888cc' : '#4a4e69'}`,
-        color: active ? '#ffffff' : '#9090bb',
-        fontSize: 8,
-        cursor: 'pointer',
-        fontFamily: "'Press Start 2P', monospace",
-        userSelect: 'none',
-        lineHeight: 1,
+    <div 
+      onPointerDown={e => {
+        if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('.edge-btn')) return
+        setIsDragging(true)
+        dragStart.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }
+        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
       }}
-      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#3a3a60'; e.currentTarget.style.color = '#c0c0e0' } }}
-      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = '#2a2a4a'; e.currentTarget.style.color = '#9090bb' } }}
+      onPointerMove={e => {
+        if (!isDragging) return
+        setPos({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y })
+      }}
+      onPointerUp={() => setIsDragging(false)}
+      style={{
+        position: 'fixed', left: pos.x, top: pos.y,
+        background: '#16162a', border: '3px solid #4a4e69', padding: '20px', zIndex: 10000,
+        fontFamily: "'Press Start 2P', monospace", textAlign: 'center', boxShadow: '0 0 40px rgba(0,0,0,0.7)',
+        cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none', width: 150, borderRadius: '8px'
+      }}
     >
-      {label}
+      <div style={{ fontSize: 6, color: '#cc88ff', marginBottom: 20, pointerEvents: 'none', opacity: 0.7 }}>DRAG TO MOVE</div>
+      
+      <div style={{ position: 'relative', width: 100, height: 100, margin: '0 auto 24px' }}>
+        {/* 四角形のガイド */}
+        <div style={{ position: 'absolute', left: 20, top: 20, width: 60, height: 60, border: '2px dashed #3a3a5a', borderRadius: '4px' }} />
+        
+        {/* 各辺ボタン (ヒットエリアを拡大) */}
+        <div className="edge-btn" title="Top"    style={btnStyle('top',    { left: 20, top: 5,  width: 60, height: 10 })} onClick={() => toggleEdge('top')}></div>
+        <div className="edge-btn" title="Bottom" style={btnStyle('bottom', { left: 20, top: 85, width: 60, height: 10 })} onClick={() => toggleEdge('bottom')}></div>
+        <div className="edge-btn" title="Left"   style={btnStyle('left',   { left: 5,  top: 20, width: 10, height: 60 })} onClick={() => toggleEdge('left')}><div style={{ transform: 'rotate(-90deg)' }}></div></div>
+        <div className="edge-btn" title="Right"  style={btnStyle('right',  { left: 85, top: 20, width: 10, height: 60 })} onClick={() => toggleEdge('right')}><div style={{ transform: 'rotate(90deg)' }}></div></div>
+      </div>
+
+      <button 
+        className="pixel-btn" 
+        onClick={onClose}
+        style={{ width: '100%', background: '#444', color: '#fff', fontSize: 8, cursor: 'pointer', height: 32 }}
+      >
+        CLOSE
+      </button>
     </div>
   )
 }
@@ -89,25 +182,10 @@ export default function Toolbar({
   onToggleHelp,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const wallBtnRef = useRef<HTMLDivElement>(null)
   const [showWallPicker, setShowWallPicker] = useState(false)
-  const [pickerPos, setPickerPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const isWallActive = WALL_TOOLS.includes(tool)
 
-  useEffect(() => {
-    if (!isWallActive) setShowWallPicker(false)
-  }, [isWallActive])
-
-  useEffect(() => {
-    if (!showWallPicker) return
-    const handler = (e: MouseEvent) => {
-      if (wallBtnRef.current && !wallBtnRef.current.contains(e.target as Node)) {
-        setShowWallPicker(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [showWallPicker])
+  const ROTATION_LABELS = ['0°', '90°', '180°', '270°']
 
   return (
     <div
@@ -176,46 +254,20 @@ export default function Toolbar({
               onClick={() => setTool('floor')}
             >FLOOR</button>
 
-            {/* WALL + picker */}
-            <div ref={wallBtnRef}>
-              <button
-                className={`pixel-btn ${isWallActive ? 'active' : ''}`}
-                onClick={() => {
-                  if (!showWallPicker && wallBtnRef.current) {
-                    const r = wallBtnRef.current.getBoundingClientRect()
-                    setPickerPos({ x: r.left, y: r.bottom + 4 })
-                  }
-                  setShowWallPicker(p => !p)
-                }}
-              >
-                WALL{isWallActive ? ` ${WALL_ICON[tool] ?? ''}` : ''}
-              </button>
-              {showWallPicker && (
-                <div style={{
-                  position: 'fixed',
-                  left: pickerPos.x,
-                  top: pickerPos.y,
-                  background: '#16162a',
-                  border: '2px solid #4a4e69',
-                  padding: 4,
-                  zIndex: 9999,
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 20px)',
-                  gridTemplateRows: 'repeat(3, 20px)',
-                  gap: 2,
-                }}>
-                  <WallEdgeBtn id="wallTopLeft"     label="◤" active={tool === 'wallTopLeft'}     onClick={() => { setTool('wallTopLeft');     setShowWallPicker(false) }} />
-                  <WallEdgeBtn id="wallTop"          label="▲" active={tool === 'wallTop'}          onClick={() => { setTool('wallTop');          setShowWallPicker(false) }} />
-                  <WallEdgeBtn id="wallTopRight"    label="◥" active={tool === 'wallTopRight'}    onClick={() => { setTool('wallTopRight');    setShowWallPicker(false) }} />
-                  <WallEdgeBtn id="wallLeft"         label="◀" active={tool === 'wallLeft'}         onClick={() => { setTool('wallLeft');         setShowWallPicker(false) }} />
-                  <div style={{ background: '#0c0c1e', border: '1px dashed #3a3a5a' }} />
-                  <WallEdgeBtn id="wallRight"        label="▶" active={tool === 'wallRight'}        onClick={() => { setTool('wallRight');        setShowWallPicker(false) }} />
-                  <WallEdgeBtn id="wallBottomLeft"  label="◣" active={tool === 'wallBottomLeft'}  onClick={() => { setTool('wallBottomLeft');  setShowWallPicker(false) }} />
-                  <WallEdgeBtn id="wallBottom"       label="▼" active={tool === 'wallBottom'}       onClick={() => { setTool('wallBottom');       setShowWallPicker(false) }} />
-                  <WallEdgeBtn id="wallBottomRight" label="◢" active={tool === 'wallBottomRight'} onClick={() => { setTool('wallBottomRight'); setShowWallPicker(false) }} />
-                </div>
-              )}
-            </div>
+            {/* WALL */}
+            <button
+              className={`pixel-btn ${isWallActive ? 'active' : ''}`}
+              onClick={() => setShowWallPicker(true)}
+            >
+              WALL
+            </button>
+            {showWallPicker && (
+              <WallEdgeSelector 
+                currentTool={tool} 
+                onSelect={setTool} 
+                onClose={() => setShowWallPicker(false)} 
+              />
+            )}
 
             {BASE_TOOLS.slice(1).map(t => (
               <button

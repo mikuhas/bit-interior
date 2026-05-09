@@ -5,19 +5,43 @@ import { createInitialRoom, detectAutoFloor } from '../utils/room'
 export function useRoom(initialWidth = 12, initialHeight = 10) {
   const [room, setRoom] = useState<RoomState>(() => createInitialRoom(initialWidth, initialHeight))
   const [history, setHistory] = useState<RoomState[]>([])
+  const [redoStack, setRedoStack] = useState<RoomState[]>([])
 
   const beginInteraction = useCallback(() => {
-    setHistory(prev => [...prev.slice(-49), room])
+    setHistory(prev => {
+      // 直前の履歴と同じなら追加しない（クリックのみで変更なしの場合の重複防止）
+      const last = prev[prev.length - 1]
+      if (last && JSON.stringify(last) === JSON.stringify(room)) return prev
+      return [...prev.slice(-49), room]
+    })
+    setRedoStack([])
   }, [room])
 
   const undo = useCallback(() => {
-    setHistory(prev => {
-      if (prev.length === 0) return prev
-      const last = prev[prev.length - 1]
-      setRoom(last)
-      return prev.slice(0, -1)
-    })
-  }, [])
+    if (history.length === 0) return
+    
+    const prevHistory = [...history]
+    const lastState = prevHistory.pop()!
+    
+    // 現在の状態をRedoスタックへ
+    setRedoStack(prev => [room, ...prev].slice(0, 50))
+    // 履歴から一つ戻す
+    setRoom(lastState)
+    setHistory(prevHistory)
+  }, [history, room])
+
+  const redo = useCallback(() => {
+    if (redoStack.length === 0) return
+    
+    const nextRedo = [...redoStack]
+    const nextState = nextRedo.shift()!
+    
+    // 現在の状態を履歴へ
+    setHistory(prev => [...prev.slice(-49), room])
+    // Redoスタックから一つ進める
+    setRoom(nextState)
+    setRedoStack(nextRedo)
+  }, [redoStack, room])
 
   const setCell = useCallback((row: number, col: number, type: CellType) => {
     setRoom(prev => {
@@ -127,5 +151,6 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
     loadRoom,
     beginInteraction,
     undo,
+    redo,
   }
 }
