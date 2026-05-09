@@ -11,7 +11,7 @@ export type CellType = 'empty' | 'floor' | 'autoFloor' | 'wall' | 'wallX' | 'wal
   | 'wallTopBottom' | 'wallLeftRight' // 2-edge parallel
   | 'wallTopRightBottom' | 'wallRightBottomLeft' | 'wallBottomLeftTop' | 'wallLeftTopRight' // 3-edge
   | 'wallFull' // 4-edge
-  | 'door' | 'door90' | 'door180' | 'door270' | 'window'
+  | 'door' | 'door90' | 'door180' | 'door270' | 'window' | 'windowTop' | 'windowRight' | 'windowBottom' | 'windowLeft'
 
 // 'furniture' は家具配置モード(テンプレートを選んでキャンバス上で配置)
 export type EditTool = 'floor' | 'wallX' | 'wallY' 
@@ -20,7 +20,7 @@ export type EditTool = 'floor' | 'wallX' | 'wallY'
   | 'wallTopBottom' | 'wallLeftRight'
   | 'wallTopRightBottom' | 'wallRightBottomLeft' | 'wallBottomLeftTop' | 'wallLeftTopRight'
   | 'wallFull'
-  | 'door' | 'window' | 'erase' | 'select' | 'furniture'
+  | 'door' | 'window' | 'windowTop' | 'windowRight' | 'windowBottom' | 'windowLeft' | 'erase' | 'select' | 'furniture'
 
 export type ViewMode = 'topdown' | 'isometric' | 'blueprint'
 

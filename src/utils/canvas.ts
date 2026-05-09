@@ -61,31 +61,34 @@ export function drawCell(
     return
   }
 
-  if (type === 'window') {
-    ctx.fillStyle = '#3d4160'
+  if (type === 'window' || type === 'windowTop' || type === 'windowRight' || type === 'windowBottom' || type === 'windowLeft') {
+    ctx.fillStyle = '#1a2d50' // FLOORと同じベースカラー
     ctx.fillRect(x, y, cellSize, cellSize)
-    ctx.fillStyle = '#5a6080'
-    ctx.fillRect(x, y, cellSize, 4)
-    ctx.fillStyle = '#4d5170'
-    ctx.fillRect(x, y, 4, cellSize)
-    ctx.fillStyle = '#252840'
-    ctx.fillRect(x, y + cellSize - 4, cellSize, 4)
-    ctx.fillStyle = '#2d3050'
-    ctx.fillRect(x + cellSize - 4, y, 4, cellSize)
-    ctx.fillStyle = 'rgba(100,200,255,0.18)'
-    ctx.fillRect(x + 4, y + 4, cellSize - 8, cellSize - 8)
-    ctx.save()
-    ctx.strokeStyle = 'rgba(160,230,255,0.75)'
-    ctx.lineWidth = 1.5
+    
+    // ガラス面を少し薄く描画
+    ctx.fillStyle = 'rgba(74, 125, 157, 0.5)'
+    ctx.fillRect(x, y, cellSize, cellSize)
+    
+    // 枠線を描画
+    ctx.strokeStyle = '#2a4868'
+    ctx.lineWidth = 2
+    ctx.strokeRect(x, y, cellSize, cellSize)
+    
+    // 格子を描画
     ctx.beginPath()
-    ctx.moveTo(x + 4, y + cellSize / 2)
-    ctx.lineTo(x + cellSize - 4, y + cellSize / 2)
+    ctx.moveTo(x + cellSize / 2, y)
+    ctx.lineTo(x + cellSize / 2, y + cellSize)
+    ctx.moveTo(x, y + cellSize / 2)
+    ctx.lineTo(x + cellSize, y + cellSize / 2)
     ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo(x + cellSize / 2, y + 4)
-    ctx.lineTo(x + cellSize / 2, y + cellSize - 4)
-    ctx.stroke()
-    ctx.restore()
+    
+    // 設置辺のマークを描画
+    ctx.strokeStyle = '#e8c050'
+    ctx.lineWidth = 3
+    if (type === 'windowTop') ctx.strokeRect(x, y, cellSize, 4)
+    if (type === 'windowRight') ctx.strokeRect(x + cellSize - 4, y, 4, cellSize)
+    if (type === 'windowBottom') ctx.strokeRect(x, y + cellSize - 4, cellSize, 4)
+    if (type === 'windowLeft') ctx.strokeRect(x, y, 4, cellSize)
     return
   }
 

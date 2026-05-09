@@ -27,15 +27,99 @@ interface Props {
 const BASE_TOOLS: { id: EditTool; label: string }[] = [
   { id: 'floor', label: 'FLOOR' },
   { id: 'door', label: 'DOOR' },
-  { id: 'window', label: 'WIN' },
   { id: 'erase', label: 'ERASE' },
   { id: 'select', label: 'SELECT' },
   { id: 'furniture', label: 'PLACE' },
 ]
 
 const WALL_TOOLS: EditTool[] = ['wallTop', 'wallRight', 'wallBottom', 'wallLeft', 'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft']
+const WINDOW_TOOLS: EditTool[] = ['window', 'windowTop', 'windowRight', 'windowBottom', 'windowLeft']
 
-// エッジの組み合わせからCellTypeへのマッピング (正規化された順序: top, right, bottom, left)
+function WindowEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: EditTool; onSelect: (t: EditTool) => void; onClose: () => void }) {
+  const [pos, setPos] = useState({ x: window.innerWidth / 2 - 75, y: window.innerHeight / 2 - 100 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStart = useRef({ x: 0, y: 0 })
+
+  const selectWindow = (edge: 'top' | 'right' | 'bottom' | 'left' | 'none') => {
+    if (edge === 'none') {
+      onSelect('window')
+    } else {
+      const mapping: Record<string, EditTool> = {
+        'top': 'windowTop',
+        'right': 'windowRight',
+        'bottom': 'windowBottom',
+        'left': 'windowLeft'
+      }
+      onSelect(mapping[edge])
+    }
+  }
+
+  const btnStyle = (edge: string, baseStyle: React.CSSProperties): React.CSSProperties => {
+    const isSelected = (edge === 'none' && currentTool === 'window') || 
+                       (edge === 'top' && currentTool === 'windowTop') ||
+                       (edge === 'right' && currentTool === 'windowRight') ||
+                       (edge === 'bottom' && currentTool === 'windowBottom') ||
+                       (edge === 'left' && currentTool === 'windowLeft')
+    
+    return {
+      ...baseStyle,
+      position: 'absolute',
+      cursor: 'pointer',
+      background: isSelected ? '#00ff88' : '#2a2a4a',
+      border: `2px solid ${isSelected ? '#fff' : '#4a4e69'}`,
+      borderRadius: '4px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '8px',
+      color: isSelected ? '#000' : '#7878aa',
+      transition: 'all 0.15s ease',
+      boxShadow: isSelected ? '0 0 10px rgba(0,255,136,0.5)' : 'none',
+    }
+  }
+
+  return (
+    <div 
+      onPointerDown={e => {
+        if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('.edge-btn')) return
+        setIsDragging(true)
+        dragStart.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }
+        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      }}
+      onPointerMove={e => {
+        if (!isDragging) return
+        setPos({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y })
+      }}
+      onPointerUp={() => setIsDragging(false)}
+      style={{
+        position: 'fixed', left: pos.x, top: pos.y,
+        background: '#16162a', border: '3px solid #6688cc', padding: '20px', zIndex: 10000,
+        fontFamily: "'Press Start 2P', monospace", textAlign: 'center', boxShadow: '0 0 40px rgba(0,0,0,0.7)',
+        cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none', width: 150, borderRadius: '8px'
+      }}
+    >
+      <div style={{ fontSize: 6, color: '#88ccff', marginBottom: 20, pointerEvents: 'none', opacity: 0.7 }}>SELECT SIDE</div>
+      
+      <div style={{ position: 'relative', width: 100, height: 100, margin: '0 auto 24px' }}>
+        <div style={{ position: 'absolute', left: 20, top: 20, width: 60, height: 60, border: '2px dashed #3a3a5a', borderRadius: '4px' }} />
+        
+        <div className="edge-btn" onClick={() => selectWindow('top')}    style={btnStyle('top',    { left: 20, top: 5,  width: 60, height: 10 })}></div>
+        <div className="edge-btn" onClick={() => selectWindow('bottom')} style={btnStyle('bottom', { left: 20, top: 85, width: 60, height: 10 })}></div>
+        <div className="edge-btn" onClick={() => selectWindow('left')}   style={btnStyle('left',   { left: 5,  top: 20, width: 10, height: 60 })}></div>
+        <div className="edge-btn" onClick={() => selectWindow('right')}  style={btnStyle('right',  { left: 85, top: 20, width: 10, height: 60 })}></div>
+        <div className="edge-btn" onClick={() => selectWindow('none')}   style={btnStyle('none',   { left: 35, top: 35, width: 30, height: 30 })}>C</div>
+      </div>
+
+      <button 
+        className="pixel-btn" 
+        onClick={onClose}
+        style={{ width: '100%', background: '#444', color: '#fff', fontSize: 8, cursor: 'pointer', height: 32 }}
+      >
+        CLOSE
+      </button>
+    </div>
+  )
+}
 const EDGE_MAP: Record<string, EditTool> = {
   'top': 'wallTop',
   'right': 'wallRight',
@@ -198,7 +282,9 @@ export default function Toolbar({
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showWallPicker, setShowWallPicker] = useState(false)
+  const [showWindowPicker, setShowWindowPicker] = useState(false)
   const isWallActive = WALL_TOOLS.includes(tool)
+  const isWindowActive = WINDOW_TOOLS.includes(tool)
 
   const ROTATION_LABELS = ['0°', '90°', '180°', '270°']
 
@@ -281,6 +367,21 @@ export default function Toolbar({
                 currentTool={tool} 
                 onSelect={setTool} 
                 onClose={() => setShowWallPicker(false)} 
+              />
+            )}
+
+            {/* WINDOW */}
+            <button
+              className={`pixel-btn ${isWindowActive ? 'active' : ''}`}
+              onClick={() => setShowWindowPicker(true)}
+            >
+              WIN
+            </button>
+            {showWindowPicker && (
+              <WindowEdgeSelector 
+                currentTool={tool} 
+                onSelect={setTool} 
+                onClose={() => setShowWindowPicker(false)} 
               />
             )}
 

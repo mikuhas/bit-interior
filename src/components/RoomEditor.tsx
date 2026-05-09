@@ -55,7 +55,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
 
   const shortcutActions = useMemo(() => ({
     undo, redo, onSave: handleSave, 
-    onSelectInstance: handleSelectInstance, onSelectTemplate: handleSelectTemplate,
+    onSelectInstance: handleSelectInstance, onSelectTemplate: (id: string | null) => handleSelectTemplate(id ?? ''),
     toggleHelp, setViewMode, setTool: handleSetTool
   }), [undo, redo, handleSave, handleSelectInstance, handleSelectTemplate, toggleHelp, setViewMode, handleSetTool])
 

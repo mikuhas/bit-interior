@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react'
 import { RoomState } from '../types'
 import { getTemplate } from '../data/furniture'
 import { rotateShape, expandShape } from '../utils/room'
-import { TILE_W, TILE_H, Z_PX, shade, mix, isoUV, isoRect, isoLine } from '../utils/isometric'
+import { TILE_W, TILE_H, Z_PX, shade, mix, isoUV, isoRect, isoLine, drawWindow, drawDoor } from '../utils/isometric'
 import { FURNITURE_DRAWERS, DrawContext } from './iso/draw'
 
 const WALL_TYPES = new Set(['wall','wallX','wallY','wallTop','wallRight','wallBottom','wallLeft','wallTopRight','wallTopLeft','wallBottomRight','wallBottomLeft','door','window'])
@@ -148,166 +148,101 @@ export default function IsometricView({ room, darkMode=true }: Props) {
     }
 
     // object pass (wall/door/window/furniture)
-    const objectCells=allCells.filter(({row,col})=>room.cells[row][col]!=='empty')
-    objectCells.sort((a,b)=>{
-      const dA=a.row+a.col; const dB=b.row+b.col
-      if(dA!==dB) return dA-dB
-      const wA=WALL_TYPES.has(room.cells[a.row][a.col])?1:0
-      const wB=['wall','wallX','wallY'].includes(room.cells[b.row][b.col])?1:0
-      if(wA!==wB) return wA-wB
-      const zA=furnitureCellMap.get(`${a.row},${a.col}`)?.z??0
-      const zB=furnitureCellMap.get(`${b.row},${b.col}`)?.z??0
-      return zA-zB
+    const objectCells = allCells.filter(({ row, col }) => room.cells[row][col] !== 'empty')
+    objectCells.sort((a, b) => {
+      const dA = a.row + a.col; const dB = b.row + b.col
+      if (dA !== dB) return dA - dB
+      return a.col - b.col
     })
 
-    const isSameInst=(row:number,col:number,id:string)=>
-      furnitureCellMap.get(`${row},${col}`)?.instanceId===id
+    const isSameInst = (row: number, col: number, id: string) =>
+      furnitureCellMap.get(`${row},${col}`)?.instanceId === id
 
-    for(const{row,col} of objectCells){
-      const cell=room.cells[row][col]
-      const{x,y}=toScreen(col,row)
+    for (const { row, col } of objectCells) {
+      const cell = room.cells[row][col]
+      const { x, y } = toScreen(col, row)
 
-      if(cell==='wall'||cell==='door'||cell==='window'){
-        const h=wallH
-        let wc=wallColor
-        if(cell==='door')   wc='#6a4820'
-        if(cell==='window') wc='#2a4868'
-        const wLeft=shade(wc,0.82); const wRight=shade(wc,0.65); const wTop=shade(wc,1.55)
-        ctx.save(); ctx.globalAlpha=WALL_ALPHA
-        ctx.beginPath()
-        ctx.moveTo(x-TILE_W/2,y+TILE_H/2);ctx.lineTo(x,y+TILE_H);ctx.lineTo(x,y+TILE_H-h);ctx.lineTo(x-TILE_W/2,y+TILE_H/2-h)
-        ctx.closePath();ctx.fillStyle=wLeft;ctx.fill();ctx.strokeStyle=shade(wc,0.5);ctx.lineWidth=1;ctx.stroke()
-        ctx.beginPath()
-        ctx.moveTo(x+TILE_W/2,y+TILE_H/2);ctx.lineTo(x,y+TILE_H);ctx.lineTo(x,y+TILE_H-h);ctx.lineTo(x+TILE_W/2,y+TILE_H/2-h)
-        ctx.closePath();ctx.fillStyle=wRight;ctx.fill();ctx.strokeStyle=shade(wc,0.5);ctx.lineWidth=1;ctx.stroke()
-        ctx.beginPath()
-        ctx.moveTo(x,y-h);ctx.lineTo(x+TILE_W/2,y+TILE_H/2-h);ctx.lineTo(x,y+TILE_H-h);ctx.lineTo(x-TILE_W/2,y+TILE_H/2-h)
-        ctx.closePath();ctx.fillStyle=wTop;ctx.fill()
-        if(cell==='door'){
-          const[fx,fy]=isoUV(x,y,h,0.5,0.5)
-          ctx.beginPath();ctx.arc(fx,fy,8,0,Math.PI*2);ctx.fillStyle='#e8c050';ctx.fill()
+      // 1. 床の描画 (Z=0基準)
+      ctx.save()
+      ctx.globalAlpha = 1
+      isoRect(ctx, x, y, 0, 0, 0, 1, 1, '#1a2d50', '#0d1535')
+      ctx.restore()
+
+      // 2. 壁・窓・ドアの描画
+      if (cell === 'wall' || cell === 'wallTop' || cell === 'wallRight' || cell === 'wallBottom' || cell === 'wallLeft' ||
+        cell === 'wallTopRight' || cell === 'wallTopLeft' || cell === 'wallBottomRight' || cell === 'wallBottomLeft' ||
+        cell === 'wallTopBottom' || cell === 'wallLeftRight' ||
+        cell === 'wallTopRightBottom' || cell === 'wallRightBottomLeft' ||
+        cell === 'wallBottomLeftTop' || cell === 'wallLeftTopRight' ||
+        cell === 'wallFull' ||
+        cell === 'window' || cell === 'windowTop' || cell === 'windowRight' || cell === 'windowBottom' || cell === 'windowLeft' ||
+        cell === 'door' || cell === 'door90' || cell === 'door180' || cell === 'door270') {
+
+        ctx.save(); ctx.globalAlpha = WALL_ALPHA
+
+        // 壁の描画
+        const isWall = ['wall', 'wallTop', 'wallRight', 'wallBottom', 'wallLeft', 'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft', 'wallTopBottom', 'wallLeftRight', 'wallTopRightBottom', 'wallRightBottomLeft', 'wallBottomLeftTop', 'wallLeftTopRight', 'wallFull'].includes(cell)
+        if (isWall) {
+          const isTop = ['wallTop', 'wallTopRight', 'wallTopLeft', 'wallTopBottom', 'wallTopRightBottom', 'wallBottomLeftTop', 'wallLeftTopRight', 'wallFull', 'windowTop'].includes(cell)
+          const isRight = ['wallRight', 'wallTopRight', 'wallBottomRight', 'wallLeftRight', 'wallTopRightBottom', 'wallRightBottomLeft', 'wallLeftTopRight', 'wallFull', 'windowRight'].includes(cell)
+          const isBottom = ['wallBottom', 'wallBottomRight', 'wallBottomLeft', 'wallTopBottom', 'wallTopRightBottom', 'wallRightBottomLeft', 'wallBottomLeftTop', 'wallFull', 'windowBottom'].includes(cell)
+          const isLeft = ['wallLeft', 'wallTopLeft', 'wallBottomLeft', 'wallLeftRight', 'wallRightBottomLeft', 'wallBottomLeftTop', 'wallLeftTopRight', 'wallFull', 'windowLeft'].includes(cell)
+          drawEdgeWall(ctx, x, y, wallH, wallColor, isTop, isRight, isBottom, isLeft)
         }
-        if(cell==='window'){
-          isoRect(ctx,x,y,h,0.1,0.1,0.9,0.9,'rgba(100,200,255,0.28)','rgba(160,230,255,0.5)')
-          isoLine(ctx,x,y,h,0.5,0.1,0.5,0.9,'rgba(160,230,255,0.6)',1)
-          isoLine(ctx,x,y,h,0.1,0.5,0.9,0.5,'rgba(160,230,255,0.6)',1)
+
+        // 窓の描画
+        if (cell === 'windowTop') drawWindow(ctx, x, y, wallH, 'top')
+        if (cell === 'windowRight') drawWindow(ctx, x, y, wallH, 'right')
+        if (cell === 'windowBottom') drawWindow(ctx, x, y, wallH, 'bottom')
+        if (cell === 'windowLeft') drawWindow(ctx, x, y, wallH, 'left')
+
+        // ドアの描画
+        if (cell === 'door') drawDoor(ctx, x, y, wallH, 'bottom')
+        if (cell === 'door90') drawDoor(ctx, x, y, wallH, 'right')
+        if (cell === 'door180') drawDoor(ctx, x, y, wallH, 'top')
+        if (cell === 'door270') drawDoor(ctx, x, y, wallH, 'left')
+
+        ctx.restore()
         }
-        ctx.restore()
-      }
 
-      if(cell==='wallX'||cell==='wallBottom'){
-        ctx.save(); ctx.globalAlpha=WALL_ALPHA
-        const h=wallH; const wTop=shade(wallColor,1.55); const wFace=shade(wallColor,0.82)
-        ctx.beginPath()
-        ctx.moveTo(x-TILE_W/2,y+TILE_H/2);ctx.lineTo(x,y+TILE_H);ctx.lineTo(x,y+TILE_H-h);ctx.lineTo(x-TILE_W/2,y+TILE_H/2-h)
-        ctx.closePath();ctx.fillStyle=wFace;ctx.fill();ctx.strokeStyle=shade(wallColor,0.5);ctx.lineWidth=1;ctx.stroke()
-        isoRect(ctx,x,y,h,0,0.9,1,1,wTop)
-        ctx.restore()
-      }
+      // 3. 家具の描画
+      const fc = furnitureCellMap.get(`${row},${col}`)
+      if (fc) {
+        const cubeH = fc.height * 18
+        const zOff = fc.screenZOff // Z=0を基準とした高さ
+        const baseY = y - zOff
+        
+        const topFace = shade(fc.color, 1.60); const leftFace = shade(fc.color, 0.38)
+        const rightFace = shade(fc.color, 0.65); const outerEdge = shade(fc.color, 0.22)
+        const leftInt = isSameInst(row + 1, col, fc.instanceId)
+        const rightInt = isSameInst(row, col + 1, fc.instanceId)
 
-      if(cell==='wallY'||cell==='wallRight'){
-        ctx.save(); ctx.globalAlpha=WALL_ALPHA
-        const h=wallH; const wTop=shade(wallColor,1.55); const wFace=shade(wallColor,0.65)
-        ctx.beginPath()
-        ctx.moveTo(x+TILE_W/2,y+TILE_H/2);ctx.lineTo(x,y+TILE_H);ctx.lineTo(x,y+TILE_H-h);ctx.lineTo(x+TILE_W/2,y+TILE_H/2-h)
-        ctx.closePath();ctx.fillStyle=wFace;ctx.fill();ctx.strokeStyle=shade(wallColor,0.5);ctx.lineWidth=1;ctx.stroke()
-        isoRect(ctx,x,y,h,0.9,0,1,1,wTop)
-        ctx.restore()
-      }
-
-      if(cell==='wallTop'||cell==='wallLeft'||
-         cell==='wallTopRight'||cell==='wallTopLeft'||
-         cell==='wallBottomRight'||cell==='wallBottomLeft' ||
-         cell==='wallTopBottom' || cell==='wallLeftRight' ||
-         cell==='wallTopRightBottom' || cell==='wallRightBottomLeft' || 
-         cell==='wallBottomLeftTop' || cell==='wallLeftTopRight' ||
-         cell==='wallFull'){
-        ctx.save(); ctx.globalAlpha=WALL_ALPHA
-        drawEdgeWall(ctx,x,y,wallH,wallColor,
-          ['wallTop','wallTopRight','wallTopLeft','wallTopBottom','wallTopRightBottom','wallBottomLeftTop','wallLeftTopRight','wallFull'].includes(cell),
-          ['wallRight','wallTopRight','wallBottomRight','wallLeftRight','wallTopRightBottom','wallRightBottomLeft','wallLeftTopRight','wallFull'].includes(cell),
-          ['wallBottom','wallBottomRight','wallBottomLeft','wallTopBottom','wallTopRightBottom','wallRightBottomLeft','wallBottomLeftTop','wallFull'].includes(cell),
-          ['wallLeft','wallTopLeft','wallBottomLeft','wallLeftRight','wallRightBottomLeft','wallBottomLeftTop','wallLeftTopRight','wallFull'].includes(cell)
-        )
-        ctx.restore()
-      }
-
-      // コーナーピラー
-      if(cell==='wallX'||cell==='wallY'){
-        const h=wallH
-        const wc=wallColor
-        const pTop=shade(wc,1.55); const pLeft=shade(wc,0.82); const pRight=shade(wc,0.65)
-        const isWX=(r:number,c:number)=>r>=0&&r<room.height&&c>=0&&c<room.width&&room.cells[r][c]==='wallX'
-        const isWY=(r:number,c:number)=>r>=0&&r<room.height&&c>=0&&c<room.width&&room.cells[r][c]==='wallY'
-        if(cell==='wallX'){
-          if(isWY(row,col-1)){
-            const[ax,ay]=isoUV(x,y,0,0,0.9); const[bx,by]=isoUV(x,y,0,0.1,0.9)
-            const[cx2,cy2]=isoUV(x,y,0,0.1,1); const[dx,dy]=isoUV(x,y,0,0,1)
-            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.closePath()
-            ctx.fillStyle=pTop;ctx.fill()
-            ctx.beginPath();ctx.moveTo(dx,dy);ctx.lineTo(cx2,cy2);ctx.lineTo(cx2,cy2-h);ctx.lineTo(dx,dy-h);ctx.closePath()
-            ctx.fillStyle=pRight;ctx.fill()
-          }
-          if(isWY(row,col+1)){
-            const[ax,ay]=isoUV(x,y,0,0.9,0.9); const[bx,by]=isoUV(x,y,0,1,0.9)
-            const[cx2,cy2]=isoUV(x,y,0,1,1); const[dx,dy]=isoUV(x,y,0,0.9,1)
-            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.closePath()
-            ctx.fillStyle=pTop;ctx.fill()
-            ctx.beginPath();ctx.moveTo(cx2,cy2);ctx.lineTo(bx,by);ctx.lineTo(bx,by-h);ctx.lineTo(cx2,cy2-h);ctx.closePath()
-            ctx.fillStyle=pLeft;ctx.fill()
-          }
-        }
-        if(cell==='wallY'){
-          if(isWX(row-1,col)){
-            const[ax,ay]=isoUV(x,y,0,0.9,0); const[bx,by]=isoUV(x,y,0,1,0)
-            const[cx2,cy2]=isoUV(x,y,0,1,0.1); const[dx,dy]=isoUV(x,y,0,0.9,0.1)
-            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.closePath()
-            ctx.fillStyle=pTop;ctx.fill()
-            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(dx,dy);ctx.lineTo(dx,dy-h);ctx.lineTo(ax,ay-h);ctx.closePath()
-            ctx.fillStyle=pLeft;ctx.fill()
-          }
-          if(isWX(row+1,col)){
-            const[ax,ay]=isoUV(x,y,0,0.9,0.9); const[bx,by]=isoUV(x,y,0,1,0.9)
-            const[cx2,cy2]=isoUV(x,y,0,1,1); const[dx,dy]=isoUV(x,y,0,0.9,1)
-            ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.closePath()
-            ctx.fillStyle=pTop;ctx.fill()
-            ctx.beginPath();ctx.moveTo(cx2,cy2);ctx.lineTo(dx,dy);ctx.lineTo(dx,dy-h);ctx.lineTo(cx2,cy2-h);ctx.closePath()
-            ctx.fillStyle=pRight;ctx.fill()
-          }
-        }
-      }
-
-      if(cell==='floor'||cell==='autoFloor'){
-        const fc=furnitureCellMap.get(`${row},${col}`)
-        if(!fc) continue
-        const cubeH=fc.height*18; const zOff=fc.screenZOff; const baseY=y-zOff
-        const topFace=shade(fc.color,1.60); const leftFace=shade(fc.color,0.38)
-        const rightFace=shade(fc.color,0.65); const outerEdge=shade(fc.color,0.22)
-        const leftInt=isSameInst(row+1,col,fc.instanceId)
-        const rightInt=isSameInst(row,col+1,fc.instanceId)
         // left face
         ctx.beginPath()
-        ctx.moveTo(x-TILE_W/2,baseY+TILE_H/2);ctx.lineTo(x,baseY+TILE_H)
-        ctx.lineTo(x,baseY+TILE_H-cubeH);ctx.lineTo(x-TILE_W/2,baseY+TILE_H/2-cubeH)
-        ctx.closePath();ctx.fillStyle=leftFace;ctx.fill()
-        ctx.strokeStyle=leftInt?shade(leftFace,0.82):outerEdge;ctx.lineWidth=leftInt?0.5:1.2;ctx.stroke()
+        ctx.moveTo(x - TILE_W / 2, baseY + TILE_H / 2); ctx.lineTo(x, baseY + TILE_H)
+        ctx.lineTo(x, baseY + TILE_H - cubeH); ctx.lineTo(x - TILE_W / 2, baseY + TILE_H / 2 - cubeH)
+        ctx.closePath(); ctx.fillStyle = leftFace; ctx.fill()
+        ctx.strokeStyle = leftInt ? shade(leftFace, 0.82) : outerEdge; ctx.lineWidth = leftInt ? 0.5 : 1.2; ctx.stroke()
+        
         // right face
         ctx.beginPath()
-        ctx.moveTo(x+TILE_W/2,baseY+TILE_H/2);ctx.lineTo(x,baseY+TILE_H)
-        ctx.lineTo(x,baseY+TILE_H-cubeH);ctx.lineTo(x+TILE_W/2,baseY+TILE_H/2-cubeH)
-        ctx.closePath();ctx.fillStyle=rightFace;ctx.fill()
-        ctx.strokeStyle=rightInt?shade(rightFace,0.82):outerEdge;ctx.lineWidth=rightInt?0.5:1.2;ctx.stroke()
+        ctx.moveTo(x + TILE_W / 2, baseY + TILE_H / 2); ctx.lineTo(x, baseY + TILE_H)
+        ctx.lineTo(x, baseY + TILE_H - cubeH); ctx.lineTo(x + TILE_W / 2, baseY + TILE_H / 2 - cubeH)
+        ctx.closePath(); ctx.fillStyle = rightFace; ctx.fill()
+        ctx.strokeStyle = rightInt ? shade(rightFace, 0.82) : outerEdge; ctx.lineWidth = rightInt ? 0.5 : 1.2; ctx.stroke()
+        
         // base shadow
         ctx.beginPath()
-        ctx.moveTo(x-TILE_W/2,baseY+TILE_H/2);ctx.lineTo(x,baseY+TILE_H);ctx.lineTo(x+TILE_W/2,baseY+TILE_H/2)
-        ctx.strokeStyle=shade(fc.color,0.12);ctx.lineWidth=2;ctx.stroke()
+        ctx.moveTo(x - TILE_W / 2, baseY + TILE_H / 2); ctx.lineTo(x, baseY + TILE_H); ctx.lineTo(x + TILE_W / 2, baseY + TILE_H / 2)
+        ctx.strokeStyle = shade(fc.color, 0.12); ctx.lineWidth = 2; ctx.stroke()
+        
         // top face
         ctx.beginPath()
-        ctx.moveTo(x,baseY-cubeH);ctx.lineTo(x+TILE_W/2,baseY+TILE_H/2-cubeH)
-        ctx.lineTo(x,baseY+TILE_H-cubeH);ctx.lineTo(x-TILE_W/2,baseY+TILE_H/2-cubeH)
-        ctx.closePath();ctx.fillStyle=topFace;ctx.fill()
-        if(fc.topColor!==fc.color){ctx.fillStyle=fc.topColor+'70';ctx.fill()}
-        drawDecoration(ctx,fc,x,baseY,cubeH)
+        ctx.moveTo(x, baseY - cubeH); ctx.lineTo(x + TILE_W / 2, baseY + TILE_H / 2 - cubeH)
+        ctx.lineTo(x, baseY + TILE_H - cubeH); ctx.lineTo(x - TILE_W / 2, baseY + TILE_H / 2 - cubeH)
+        ctx.closePath(); ctx.fillStyle = topFace; ctx.fill()
+        if (fc.topColor !== fc.color) { ctx.fillStyle = fc.topColor + '70'; ctx.fill() }
+        drawDecoration(ctx, fc, x, baseY, cubeH)
       }
     }
   },[room,canvasW,canvasH,wallH,darkMode])

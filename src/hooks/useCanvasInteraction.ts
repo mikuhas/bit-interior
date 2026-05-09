@@ -69,12 +69,13 @@ export function useCanvasInteraction({
     onInteractionStart?.()
     const { row, col } = cell
 
-    const wallTools: EditTool[] = [
-      'floor', 'wallX', 'wallY', 'wallTop', 'wallRight', 'wallBottom', 'wallLeft',
-      'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft', 'door', 'window', 'erase'
-    ]
+    const wallTypes = [
+        'floor', 'wallX', 'wallY', 'wallTop', 'wallRight', 'wallBottom', 'wallLeft',
+        'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft', 'door', 'window', 
+        'windowTop', 'windowRight', 'windowBottom', 'windowLeft', 'erase'
+      ]
 
-    if (wallTools.includes(tool)) {
+    if (wallTypes.includes(tool)) {
       mouseDownRef.current = true
       const newType: CellType =
         tool === 'floor' ? 'floor'
@@ -90,9 +91,13 @@ export function useCanvasInteraction({
         : tool === 'wallBottomLeft' ? 'wallBottomLeft'
         : tool === 'door' ? (['door', 'door90', 'door180', 'door270'] as CellType[])[doorRotation]
         : tool === 'window' ? 'window'
+        : tool === 'windowTop' ? 'windowTop'
+        : tool === 'windowRight' ? 'windowRight'
+        : tool === 'windowBottom' ? 'windowBottom'
+        : tool === 'windowLeft' ? 'windowLeft'
         : 'empty'
       paintTypeRef.current = newType
-      onCellChange(row, col, newType)
+      onCellChange(row, col, newType) // クリック時の設置を有効化
     } else if (tool === 'furniture' && selectedTemplateId && ghostCell) {
       const tmpl = FURNITURE_TEMPLATES.find(t => t.id === selectedTemplateId)
       if (tmpl) {
@@ -141,12 +146,13 @@ export function useCanvasInteraction({
       setGhostCell(null)
     }
 
-    const wallTools: EditTool[] = [
+    const wallTypes = [
       'floor', 'wallX', 'wallY', 'wallTop', 'wallRight', 'wallBottom', 'wallLeft',
-      'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft', 'door', 'window', 'erase'
+      'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft', 'door', 'window', 
+      'windowTop', 'windowRight', 'windowBottom', 'windowLeft', 'erase'
     ]
 
-    if (mouseDownRef.current && wallTools.includes(tool)) {
+    if (wallTypes.includes(tool) && mouseDownRef.current) {
       onCellChange(row, col, paintTypeRef.current)
     }
 
