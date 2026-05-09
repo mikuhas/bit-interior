@@ -35,22 +35,22 @@ const BASE_TOOLS: { id: EditTool; label: string }[] = [
 
 const WALL_TOOLS: EditTool[] = ['wallTop', 'wallRight', 'wallBottom', 'wallLeft', 'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft']
 
-// エッジの組み合わせからCellTypeへのマッピング (全パターン)
+// エッジの組み合わせからCellTypeへのマッピング (正規化された順序: top, right, bottom, left)
 const EDGE_MAP: Record<string, EditTool> = {
   'top': 'wallTop',
   'right': 'wallRight',
   'bottom': 'wallBottom',
   'left': 'wallLeft',
   'top,right': 'wallTopRight',
-  'top,left': 'wallTopLeft',
-  'bottom,right': 'wallBottomRight',
-  'bottom,left': 'wallBottomLeft',
   'top,bottom': 'wallTopBottom',
+  'top,left': 'wallTopLeft',
+  'right,bottom': 'wallBottomRight',
   'right,left': 'wallLeftRight',
+  'bottom,left': 'wallBottomLeft',
   'top,right,bottom': 'wallTopRightBottom',
-  'right,bottom,left': 'wallRightBottomLeft',
-  'top,bottom,left': 'wallBottomLeftTop',
   'top,right,left': 'wallLeftTopRight',
+  'top,bottom,left': 'wallBottomLeftTop',
+  'right,bottom,left': 'wallRightBottomLeft',
   'top,right,bottom,left': 'wallFull',
 }
 
@@ -60,32 +60,47 @@ function WallEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: Edi
   const dragStart = useRef({ x: 0, y: 0 })
 
   const getSelectedEdges = (): string[] => {
-    if (currentTool === 'wallTop') return ['top']
-    if (currentTool === 'wallRight') return ['right']
-    if (currentTool === 'wallBottom') return ['bottom']
-    if (currentTool === 'wallLeft') return ['left']
-    if (currentTool === 'wallTopRight') return ['top', 'right']
-    if (currentTool === 'wallTopLeft') return ['top', 'left']
-    if (currentTool === 'wallBottomRight') return ['bottom', 'right']
-    if (currentTool === 'wallBottomLeft') return ['bottom', 'left']
-    if (currentTool === 'wallTopBottom') return ['top', 'bottom']
-    if (currentTool === 'wallLeftRight') return ['right', 'left']
-    if (currentTool === 'wallTopRightBottom') return ['top', 'right', 'bottom']
-    if (currentTool === 'wallRightBottomLeft') return ['right', 'bottom', 'left']
-    if (currentTool === 'wallBottomLeftTop') return ['top', 'bottom', 'left']
-    if (currentTool === 'wallLeftTopRight') return ['top', 'right', 'left']
-    if (currentTool === 'wallFull') return ['top', 'right', 'bottom', 'left']
-    return []
+    switch (currentTool) {
+      case 'wallTop': return ['top']
+      case 'wallRight': return ['right']
+      case 'wallBottom': return ['bottom']
+      case 'wallLeft': return ['left']
+      case 'wallTopRight': return ['top', 'right']
+      case 'wallTopBottom': return ['top', 'bottom']
+      case 'wallTopLeft': return ['top', 'left']
+      case 'wallBottomRight': return ['right', 'bottom']
+      case 'wallLeftRight': return ['right', 'left']
+      case 'wallBottomLeft': return ['bottom', 'left']
+      case 'wallTopRightBottom': return ['top', 'right', 'bottom']
+      case 'wallLeftTopRight': return ['top', 'right', 'left']
+      case 'wallBottomLeftTop': return ['top', 'bottom', 'left']
+      case 'wallRightBottomLeft': return ['right', 'bottom', 'left']
+      case 'wallFull': return ['top', 'right', 'bottom', 'left']
+      default: return []
+    }
   }
 
   const selectedEdges = getSelectedEdges()
 
   const toggleEdge = (edge: string) => {
     let next: string[] = []
+    
     if (selectedEdges.includes(edge)) {
+      // すでに選択されている場合は解除
       next = selectedEdges.filter(e => e !== edge)
     } else {
-      next = [...selectedEdges, edge]
+      // 平行な辺がすでに選ばれているかチェック
+      const isParallel = (e1: string, e2: string) => 
+        (e1 === 'top' && e2 === 'bottom') || (e1 === 'bottom' && e2 === 'top') ||
+        (e1 === 'left' && e2 === 'right') || (e1 === 'right' && e2 === 'left')
+
+      if (selectedEdges.length === 1 && isParallel(selectedEdges[0], edge)) {
+        // 平行な辺が選ばれたら、古い方を捨てて新しい方だけにする
+        next = [edge]
+      } else {
+        // それ以外は最大2辺まで保持
+        next = [...selectedEdges, edge].slice(-2)
+      }
     }
     
     if (next.length === 0) {
