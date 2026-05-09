@@ -1,18 +1,19 @@
-import { useState, useCallback, useMemo } from 'react'
-import { BitSettings, PlacedFurniture } from '../types'
-import { useRoom } from '../hooks/useRoom'
-import { useEditorState } from '../hooks/useEditorState'
-import { useFilePersistence } from '../hooks/useFilePersistence'
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
-import { hasSaveData } from '../utils/save'
+import { useCallback, useMemo } from 'react'
+import { BitSettings, PlacedFurniture, CellType } from '../types'
+import { WindowStyle, DoorStyle } from '../types/styles'
+import { useRoom } from '../hooks/editor/useRoom'
+import { useEditorState } from '../hooks/editor/useEditorState'
+import { useFilePersistence } from '../hooks/persistence/useFilePersistence'
+import { useKeyboardShortcuts } from '../hooks/editor/useKeyboardShortcuts'
+import { useSaveStatus } from '../hooks/persistence/useSaveStatus'
 import { canPlaceFurniture } from '../utils/room'
 import { getTemplate } from '../data/furniture'
-import Toolbar from './Toolbar'
-import FurniturePanel from './FurniturePanel'
-import TopDownCanvas from './TopDownCanvas'
-import IsometricView from './IsometricView'
-import ShortcutHelp from './ShortcutHelp'
-import RoomSettingsPanel from './RoomSettingsPanel'
+import Toolbar from './ui/Toolbar'
+import FurniturePanel from './ui/FurniturePanel'
+import TopDownCanvas from './canvas/TopDownCanvas'
+import IsometricView from './canvas/IsometricView'
+import ShortcutHelp from './ui/ShortcutHelp'
+import RoomSettingsPanel from './ui/RoomSettingsPanel'
 
 interface Props {
   bitSettings: BitSettings
@@ -23,7 +24,7 @@ interface Props {
 
 export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWidth, initialHeight }: Props) {
   const {
-    room, setCell, placeFurniture, moveFurniture, removeFurniture,
+    room, setCell, updateCell, placeFurniture, moveFurniture, removeFurniture,
     updateFurnitureColor, updateFurnitureZ, updateFurnitureScale,
     updateRoomAppearance, resizeRoom, loadRoom,
     beginInteraction, undo, redo,
@@ -40,17 +41,10 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
     darkMode, toggleDarkMode,
   } = useEditorState()
 
-  const [saveExists, setSaveExists] = useState(() => hasSaveData())
-  const [saveFlash, setSaveFlash] = useState(false)
-
-  const handleFlash = useCallback(() => {
-    setSaveExists(true)
-    setSaveFlash(true)
-    setTimeout(() => setSaveFlash(false), 1200)
-  }, [])
+  const { saveExists, saveFlash, triggerFlash } = useSaveStatus()
 
   const { handleSave, handleLoad, handleExport, handleImport } = useFilePersistence({
-    bitSettings, room, onRoomLoad: loadRoom, onSettingsLoad: onBitSettingsChange, onFlash: handleFlash
+    bitSettings, room, onRoomLoad: loadRoom, onSettingsLoad: onBitSettingsChange, onFlash: triggerFlash
   })
 
   const shortcutActions = useMemo(() => ({
@@ -67,6 +61,20 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
       handleSelectInstance(null)
     }
   }, [selectedInstanceId, removeFurniture, handleSelectInstance])
+
+  const rotateCell = useCallback((row: number, col: number) => {
+    const cell = room.cells[row][col]
+    const rotationMap: Record<string, CellType> = {
+      'door': 'door90', 'door90': 'door180', 'door180': 'door270', 'door270': 'door',
+      'window': 'windowTop', 'windowTop': 'windowRight', 'windowRight': 'windowBottom', 'windowBottom': 'windowLeft', 'windowLeft': 'window'
+    }
+    const next = rotationMap[cell]
+    if (next) updateCell(row, col, next)
+  }, [room, updateCell])
+
+  const handleRotate = useCallback(() => {
+    rotate()
+  }, [rotate])
 
   const handleMoveFurniture = useCallback(
     (id: string, x: number, y: number) => {
@@ -85,10 +93,12 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
     newWallHeight: number,
     newWallColor: string,
     newRoomW: number,
-    newRoomH: number
+    newRoomH: number,
+    newWindowStyle: WindowStyle,
+    newDoorStyle: DoorStyle
   ) => {
     onBitSettingsChange(newSettings)
-    updateRoomAppearance(newWallHeight, newWallColor)
+    updateRoomAppearance(newWallHeight, newWallColor, newWindowStyle, newDoorStyle)
     if (newRoomW !== room.width || newRoomH !== room.height) {
       resizeRoom(newRoomW, newRoomH)
     }
@@ -103,6 +113,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
         furnitureRotation={furnitureRotation} doorRotation={doorRotation} onRotate={rotate}
         selectedInstanceId={selectedInstanceId} onDeleteSelected={handleDeleteSelected}
         bitSettings={bitSettings} roomSize={{ width: room.width, height: room.height }}
+        room={room}
         onSave={handleSave} onLoad={handleLoad} onExport={handleExport} onImport={handleImport}
         hasSave={saveExists} onOpenSettings={toggleSettings}
         darkMode={darkMode} onToggleDarkMode={toggleDarkMode}
@@ -117,6 +128,8 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
           roomHeight={room.height}
           wallHeight={room.wallHeight ?? 3}
           wallColor={room.wallColor ?? '#2d3050'}
+          windowStyle={room.windowStyle}
+          doorStyle={room.doorStyle}
           onApply={handleApplySettings}
           onCancel={() => setShowSettings(false)}
         />
@@ -171,6 +184,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
               onMoveFurniture={handleMoveFurniture}
               onKeyDelete={handleDeleteSelected}
               onRotate={rotate}
+              onRotateCell={rotateCell}
               onInteractionStart={beginInteraction}
               blueprintMode={viewMode === 'blueprint'}
             />

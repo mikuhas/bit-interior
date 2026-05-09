@@ -1,4 +1,6 @@
-import { BitSettings, BitUnit } from '../types'
+import { BitSettings, BitUnit } from '../../types'
+import { WindowStyle, DoorStyle } from '../../types/styles'
+import { useState } from 'react'
 
 interface Props {
   bitSettings: BitSettings
@@ -7,13 +9,11 @@ interface Props {
   roomHeight: number
   wallHeight: number
   wallColor: string
-  onApply: (settings: BitSettings, wallHeight: number, wallColor: string, roomW: number, roomH: number) => void
+  windowStyle: WindowStyle
+  doorStyle: DoorStyle
+  onApply: (settings: BitSettings, wallHeight: number, wallColor: string, roomW: number, roomH: number, windowStyle: WindowStyle, doorStyle: DoorStyle) => void
   onCancel: () => void
-  // Local state managed by the parent or passed down?
-  // To keep it simple, we can manage local state here and only call onApply when done.
 }
-
-import { useState } from 'react'
 
 export default function RoomSettingsPanel({
   bitSettings,
@@ -21,6 +21,8 @@ export default function RoomSettingsPanel({
   roomHeight,
   wallHeight,
   wallColor,
+  windowStyle,
+  doorStyle,
   onApply,
   onCancel,
 }: Props) {
@@ -30,6 +32,8 @@ export default function RoomSettingsPanel({
   const [editWallColor, setEditWallColor] = useState(wallColor)
   const [editRoomW, setEditRoomW] = useState(roomWidth)
   const [editRoomH, setEditRoomH] = useState(roomHeight)
+  const [editWindowStyle, setEditWindowStyle] = useState<WindowStyle>(windowStyle)
+  const [editDoorStyle, setEditDoorStyle] = useState<DoorStyle>(doorStyle)
 
   const handleApply = () => {
     onApply(
@@ -37,7 +41,9 @@ export default function RoomSettingsPanel({
       editWallHeight,
       editWallColor,
       editRoomW,
-      editRoomH
+      editRoomH,
+      editWindowStyle,
+      editDoorStyle
     )
   }
 
@@ -79,10 +85,6 @@ export default function RoomSettingsPanel({
         </div>
       </div>
 
-      <div style={{ fontSize: 6, color: '#7878aa', marginBottom: 8 }}>
-        プレビュー: 1bit = {editBitSize}{editBitUnit}
-      </div>
-
       <div style={{ borderTop: '1px solid #2a2a4a', marginBottom: 8 }} />
       <div style={{ fontSize: 8, color: '#44aaff', marginBottom: 8, letterSpacing: 1 }}>ROOM</div>
 
@@ -115,6 +117,25 @@ export default function RoomSettingsPanel({
         />
         <span style={{ fontSize: 6, color: '#5a5a8a', fontFamily: 'monospace' }}>{editWallColor.toUpperCase()}</span>
       </div>
+
+      <div style={{ borderTop: '1px solid #2a2a4a', marginBottom: 8 }} />
+      <div style={{ fontSize: 8, color: '#4a8aff', marginBottom: 8, letterSpacing: 1 }}>STYLES</div>
+
+      <div style={{ fontSize: 6, color: '#7878aa', marginBottom: 4 }}>窓スタイル</div>
+      <select value={editWindowStyle} onChange={e => setEditWindowStyle(e.target.value as WindowStyle)}
+        style={{ width: '100%', background: '#0f0f22', color: '#e0e0ff', fontSize: 8, padding: 4, marginBottom: 8 }}>
+        <option value="basic">Basic</option>
+        <option value="modern">Modern</option>
+        <option value="classic">Classic</option>
+      </select>
+
+      <div style={{ fontSize: 6, color: '#7878aa', marginBottom: 4 }}>ドアスタイル</div>
+      <select value={editDoorStyle} onChange={e => setEditDoorStyle(e.target.value as DoorStyle)}
+        style={{ width: '100%', background: '#0f0f22', color: '#e0e0ff', fontSize: 8, padding: 4, marginBottom: 12 }}>
+        <option value="basic">Basic</option>
+        <option value="panel">Panel</option>
+        <option value="glass">Glass</option>
+      </select>
 
       <div style={{ display: 'flex', gap: 6 }}>
         <button

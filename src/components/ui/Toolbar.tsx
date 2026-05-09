@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
-import { ViewMode, EditTool, BitSettings } from '../types'
+import { ViewMode, EditTool, BitSettings } from '../../types'
+import { PDFSettingsModal } from './PDFSettingsModal'
 
 interface Props {
   viewMode: ViewMode
@@ -13,6 +14,7 @@ interface Props {
   onDeleteSelected: () => void
   bitSettings: BitSettings
   roomSize: { width: number; height: number }
+  room: any
   onSave: () => void
   onLoad: () => void
   onExport: () => void
@@ -270,6 +272,7 @@ export default function Toolbar({
   onDeleteSelected,
   bitSettings,
   roomSize,
+  room,
   onSave,
   onLoad,
   onExport,
@@ -283,6 +286,7 @@ export default function Toolbar({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showWallPicker, setShowWallPicker] = useState(false)
   const [showWindowPicker, setShowWindowPicker] = useState(false)
+  const [showPDFModal, setShowPDFModal] = useState(false)
   const isWallActive = WALL_TOOLS.includes(tool)
   const isWindowActive = WINDOW_TOOLS.includes(tool)
 
@@ -446,6 +450,21 @@ export default function Toolbar({
           >
             LOAD
           </button>
+        )}
+        <button
+          className="pixel-btn"
+          onClick={() => setShowPDFModal(true)}
+          title="PDFとして図面を出力"
+          style={{ color: '#ffcc00', borderColor: '#aa8800' }}
+        >
+          PDF
+        </button>
+        {showPDFModal && (
+          <PDFSettingsModal 
+            room={room}
+            bitSettings={bitSettings}
+            onClose={() => setShowPDFModal(false)} 
+          />
         )}
         <button
           className="pixel-btn"

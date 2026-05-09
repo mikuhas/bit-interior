@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
-import { RoomState, CellType, PlacedFurniture } from '../types'
-import { createInitialRoom, detectAutoFloor } from '../utils/room'
+import { RoomState, CellType, PlacedFurniture } from '../../types'
+import { WindowStyle, DoorStyle } from '../../types/styles'
+import { createInitialRoom, detectAutoFloor } from '../../utils/room'
 
 export function useRoom(initialWidth = 12, initialHeight = 10) {
   const [room, setRoom] = useState<RoomState>(() => createInitialRoom(initialWidth, initialHeight))
@@ -51,6 +52,15 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
         ri === row ? r.map((c, ci) => (ci === col ? type : c)) : r
       )
       return { ...prev, cells: detectAutoFloor(newCells, prev.width, prev.height) }
+    })
+  }, [])
+
+  const updateCell = useCallback((row: number, col: number, type: CellType) => {
+    setRoom(prev => {
+      const newCells = prev.cells.map((r, ri) =>
+        ri === row ? r.map((c, ci) => (ci === col ? type : c)) : r
+      )
+      return { ...prev, cells: newCells }
     })
   }, [])
 
@@ -117,8 +127,8 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
     setRoom(createInitialRoom(width, height))
   }, [])
 
-  const updateRoomAppearance = useCallback((wallHeight: number, wallColor: string) => {
-    setRoom(prev => ({ ...prev, wallHeight, wallColor }))
+  const updateRoomAppearance = useCallback((wallHeight: number, wallColor: string, windowStyle: WindowStyle, doorStyle: DoorStyle) => {
+    setRoom(prev => ({ ...prev, wallHeight, wallColor, windowStyle, doorStyle }))
   }, [])
 
   const loadRoom = useCallback((newRoom: RoomState) => {
@@ -139,6 +149,7 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
   return {
     room,
     setCell,
+    updateCell,
     placeFurniture,
     moveFurniture,
     removeFurniture,

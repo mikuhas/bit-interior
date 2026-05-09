@@ -1,9 +1,9 @@
 import { useRef, useEffect } from 'react'
-import { RoomState, CellType, EditTool, PlacedFurniture } from '../types'
-import { FURNITURE_TEMPLATES, getTemplate } from '../data/furniture'
-import { getEffectiveShape, canPlaceFurniture } from '../utils/room'
-import { drawCell, drawFurnitureCell, drawFurnitureIcon, lighten } from '../utils/canvas'
-import { useCanvasInteraction } from '../hooks/useCanvasInteraction'
+import { RoomState, CellType, EditTool, PlacedFurniture } from '../../types'
+import { FURNITURE_TEMPLATES, getTemplate } from '../../data/furniture'
+import { getEffectiveShape, canPlaceFurniture } from '../../utils/room'
+import { drawCell, drawFurnitureCell, drawFurnitureIcon, lighten } from '../../utils/canvas'
+import { useCanvasInteraction } from '../../hooks/editor/useCanvasInteraction'
 
 const CELL_SIZE = 40
 
@@ -20,6 +20,7 @@ interface Props {
   onMoveFurniture: (id: string, x: number, y: number) => void
   onKeyDelete?: () => void
   onRotate?: () => void
+  onRotateCell?: (row: number, col: number) => void
   onInteractionStart?: () => void
   blueprintMode?: boolean
 }
@@ -28,7 +29,7 @@ export default function TopDownCanvas(props: Props) {
   const {
     room, tool, selectedTemplateId, furnitureRotation, doorRotation,
     selectedInstanceId, onCellChange, onPlaceFurniture, onSelectFurniture,
-    onMoveFurniture, onKeyDelete, onRotate, onInteractionStart, blueprintMode = false
+    onMoveFurniture, onKeyDelete, onRotate, onRotateCell, onInteractionStart, blueprintMode = false
   } = props
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -37,7 +38,7 @@ export default function TopDownCanvas(props: Props) {
     hoverCell, ghostCell, onMouseDown, onMouseMove, onMouseUp, onMouseLeave
   } = useCanvasInteraction({
     room, tool, selectedTemplateId, furnitureRotation, doorRotation,
-    onCellChange, onPlaceFurniture, onSelectFurniture, onMoveFurniture, onInteractionStart
+    onCellChange, onPlaceFurniture, onSelectFurniture, onMoveFurniture, onRotateCell, onInteractionStart
   })
 
   const canvasWidth = room.width * CELL_SIZE

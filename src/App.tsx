@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { BitSettings } from './types'
-import SettingsModal from './components/SettingsModal'
+import SettingsModal from './components/ui/SettingsModal'
 import RoomEditor from './components/RoomEditor'
 
 export default function App() {

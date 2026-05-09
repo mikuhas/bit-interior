@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { EditTool, ViewMode } from '../types'
+import { EditTool, ViewMode } from '../../types'
 
 interface Actions {
   undo: () => void

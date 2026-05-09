@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react'
-import { RoomState, CellType, EditTool, PlacedFurniture } from '../types'
-import { FURNITURE_TEMPLATES, getTemplate } from '../data/furniture'
-import { canPlaceFurniture } from '../utils/room'
+import { RoomState, CellType, EditTool, PlacedFurniture } from '../../types'
+import { FURNITURE_TEMPLATES, getTemplate } from '../../data/furniture'
+import { canPlaceFurniture } from '../../utils/room'
 
 const CELL_SIZE = 40
 
@@ -15,6 +15,7 @@ interface Options {
   onPlaceFurniture: (f: PlacedFurniture) => void
   onSelectFurniture: (id: string | null) => void
   onMoveFurniture: (id: string, x: number, y: number) => void
+  onRotateCell?: (row: number, col: number) => void
   onInteractionStart?: () => void
 }
 
@@ -28,6 +29,7 @@ export function useCanvasInteraction({
   onPlaceFurniture,
   onSelectFurniture,
   onMoveFurniture,
+  onRotateCell,
   onInteractionStart,
 }: Options) {
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null)
@@ -68,6 +70,11 @@ export function useCanvasInteraction({
     if (!cell) return
     onInteractionStart?.()
     const { row, col } = cell
+
+    if (e.shiftKey && onRotateCell) {
+        onRotateCell(row, col)
+        return
+    }
 
     const wallTypes = [
         'floor', 'wallX', 'wallY', 'wallTop', 'wallRight', 'wallBottom', 'wallLeft',
@@ -196,4 +203,4 @@ export function useCanvasInteraction({
 }
 
 // Internal helper needed by getFurnitureAt
-import { getEffectiveShape } from '../utils/room'
+import { getEffectiveShape } from '../../utils/room'

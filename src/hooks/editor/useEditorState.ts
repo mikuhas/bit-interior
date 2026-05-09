@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { EditTool, ViewMode } from '../types'
+import { EditTool, ViewMode } from '../../types'
 
 export function useEditorState() {
   const [viewMode, setViewMode] = useState<ViewMode>('topdown')

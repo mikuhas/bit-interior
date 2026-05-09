@@ -1,45 +1,14 @@
 import { useRef, useEffect } from 'react'
-import { RoomState } from '../types'
-import { getTemplate } from '../data/furniture'
-import { rotateShape, expandShape } from '../utils/room'
-import { TILE_W, TILE_H, Z_PX, shade, mix, isoUV, isoRect, isoLine, drawWindow, drawDoor } from '../utils/isometric'
-import { FURNITURE_DRAWERS, DrawContext } from './iso/draw'
+import { RoomState } from '../../types'
+import { getTemplate } from '../../data/furniture'
+import { rotateShape, expandShape } from '../../utils/room'
+import { TILE_W, TILE_H, Z_PX, shade, mix, isoUV, isoRect, isoLine, drawWindow, drawDoor } from '../../utils/isometric'
+import { FURNITURE_DRAWERS, DrawContext } from '../iso/draw'
+import { drawEdgeWall } from '../iso/draw/wall'
 
 const WALL_TYPES = new Set(['wall','wallX','wallY','wallTop','wallRight','wallBottom','wallLeft','wallTopRight','wallTopLeft','wallBottomRight','wallBottomLeft','door','window'])
 const EDGE_TH = 0.1
 const WALL_ALPHA = 0.65
-
-function drawEdgeWall(ctx:CanvasRenderingContext2D,x:number,y:number,h:number,wc:string,
-  top:boolean,right:boolean,bottom:boolean,left:boolean){
-  const wTop=shade(wc,1.55);const wL=shade(wc,0.82);const wR=shade(wc,0.65);const wStk=shade(wc,0.5)
-  
-  if(bottom){
-    ctx.beginPath()
-    ctx.moveTo(x-TILE_W/2,y+TILE_H/2);ctx.lineTo(x,y+TILE_H);ctx.lineTo(x,y+TILE_H-h);ctx.lineTo(x-TILE_W/2,y+TILE_H/2-h)
-    ctx.closePath();ctx.fillStyle=wL;ctx.fill();ctx.strokeStyle=wStk;ctx.lineWidth=1;ctx.stroke()
-    isoRect(ctx,x,y,h,0,1-EDGE_TH,1,1,wTop)
-  }
-  if(right){
-    ctx.beginPath()
-    ctx.moveTo(x+TILE_W/2,y+TILE_H/2);ctx.lineTo(x,y+TILE_H);ctx.lineTo(x,y+TILE_H-h);ctx.lineTo(x+TILE_W/2,y+TILE_H/2-h)
-    ctx.closePath();ctx.fillStyle=wR;ctx.fill();ctx.strokeStyle=wStk;ctx.lineWidth=1;ctx.stroke()
-    isoRect(ctx,x,y,h,1-EDGE_TH,0,1,1,wTop)
-  }
-  if(top){
-    const[ax,ay]=isoUV(x,y,0,0,EDGE_TH),[bx,by]=isoUV(x,y,0,1,EDGE_TH)
-    const[ex,ey]=isoUV(x,y,h,1,EDGE_TH),[fx,fy]=isoUV(x,y,h,0,EDGE_TH)
-    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(ex,ey);ctx.lineTo(fx,fy)
-    ctx.closePath();ctx.fillStyle=wL;ctx.fill();ctx.strokeStyle=wStk;ctx.lineWidth=1;ctx.stroke()
-    isoRect(ctx,x,y,h,0,0,1,EDGE_TH,wTop)
-  }
-  if(left){
-    const[ax,ay]=isoUV(x,y,0,EDGE_TH,0),[bx,by]=isoUV(x,y,0,EDGE_TH,1)
-    const[ex,ey]=isoUV(x,y,h,EDGE_TH,1),[fx,fy]=isoUV(x,y,h,EDGE_TH,0)
-    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(ex,ey);ctx.lineTo(fx,fy)
-    ctx.closePath();ctx.fillStyle=wR;ctx.fill();ctx.strokeStyle=wStk;ctx.lineWidth=1;ctx.stroke()
-    isoRect(ctx,x,y,h,0,0,EDGE_TH,1,wTop)
-  }
-}
 
 function sideLine(ctx:CanvasRenderingContext2D,x:number,y:number,cubeH:number,
   tU:number,side:'left'|'right',color:string,lw=0.8){
@@ -191,16 +160,16 @@ export default function IsometricView({ room, darkMode=true }: Props) {
         }
 
         // 窓の描画
-        if (cell === 'windowTop') drawWindow(ctx, x, y, wallH, 'top')
-        if (cell === 'windowRight') drawWindow(ctx, x, y, wallH, 'right')
-        if (cell === 'windowBottom') drawWindow(ctx, x, y, wallH, 'bottom')
-        if (cell === 'windowLeft') drawWindow(ctx, x, y, wallH, 'left')
+        if (cell === 'windowTop') drawWindow(ctx, x, y, wallH, 'top', room.windowStyle)
+        if (cell === 'windowRight') drawWindow(ctx, x, y, wallH, 'right', room.windowStyle)
+        if (cell === 'windowBottom') drawWindow(ctx, x, y, wallH, 'bottom', room.windowStyle)
+        if (cell === 'windowLeft') drawWindow(ctx, x, y, wallH, 'left', room.windowStyle)
 
         // ドアの描画
-        if (cell === 'door') drawDoor(ctx, x, y, wallH, 'bottom')
-        if (cell === 'door90') drawDoor(ctx, x, y, wallH, 'right')
-        if (cell === 'door180') drawDoor(ctx, x, y, wallH, 'top')
-        if (cell === 'door270') drawDoor(ctx, x, y, wallH, 'left')
+        if (cell === 'door') drawDoor(ctx, x, y, wallH, 'bottom', room.doorStyle)
+        if (cell === 'door90') drawDoor(ctx, x, y, wallH, 'right', room.doorStyle)
+        if (cell === 'door180') drawDoor(ctx, x, y, wallH, 'top', room.doorStyle)
+        if (cell === 'door270') drawDoor(ctx, x, y, wallH, 'left', room.doorStyle)
 
         ctx.restore()
         }

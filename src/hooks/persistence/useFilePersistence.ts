@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
-import { BitSettings, RoomState } from '../types'
-import { saveToLocalStorage, loadFromLocalStorage, exportAsJson, importFromJson } from '../utils/save'
+import { BitSettings, RoomState } from '../../types'
+import { saveToLocalStorage, loadFromLocalStorage, exportAsJson, importFromJson } from '../../utils/save'
 
 interface Options {
   bitSettings: BitSettings

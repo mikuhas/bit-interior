@@ -1,5 +1,5 @@
-import { BitSettings, PlacedFurniture } from '../types'
-import { getTemplate } from '../data/furniture'
+import { BitSettings, PlacedFurniture } from '../../types'
+import { getTemplate } from '../../data/furniture'
 import ColorPicker from './ColorPicker'
 
 interface Props {

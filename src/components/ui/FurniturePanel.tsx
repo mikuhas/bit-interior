@@ -1,5 +1,5 @@
-import { BitSettings, EditTool, PlacedFurniture } from '../types'
-import FurnitureList from './FurnitureList'
+import { BitSettings, EditTool, PlacedFurniture } from '../../types'
+import FurnitureList from '../FurnitureList'
 import FurnitureProperties from './FurnitureProperties'
 
 interface Props {

@@ -69,28 +69,35 @@ export function isoLine(
   ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke()
 }
 
+import { WindowStyle, DoorStyle } from '../types/styles'
+
+// ...
+
 export function drawWindow(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   h: number,
   side: 'top' | 'right' | 'bottom' | 'left',
-  style: 'basic' = 'basic'
+  style: WindowStyle = 'basic'
 ) {
   ctx.save()
-  if (style === 'basic') {
-    const glass = 'rgba(180, 230, 255, 0.4)'
-    const frame = 'rgba(255, 255, 255, 0.8)'
+  const glass = 'rgba(180, 230, 255, 0.3)'
+  const frame = '#e0e0e0'
+  const sash = '#a0a0a0'
     
-    if (side === 'top') {
-        isoRect(ctx, x, y, h, 0.1, 0, 0.9, 0.2, glass, frame)
-    } else if (side === 'bottom') {
-        isoRect(ctx, x, y, h, 0.1, 0.8, 0.9, 1.0, glass, frame)
-    } else if (side === 'left') {
-        isoRect(ctx, x, y, h, 0, 0.1, 0.2, 0.9, glass, frame)
-    } else if (side === 'right') {
-        isoRect(ctx, x, y, h, 0.8, 0.1, 1.0, 0.9, glass, frame)
-    }
+  if (side === 'top') {
+      isoRect(ctx, x, y, h, 0.2, 0, 0.8, 0.1, frame)
+      isoRect(ctx, x, y, h * 0.9, 0.25, 0, 0.75, 0.05, sash)
+  } else if (side === 'bottom') {
+      isoRect(ctx, x, y, h, 0.2, 0.9, 0.8, 1.0, frame)
+      isoRect(ctx, x, y, h * 0.9, 0.25, 0.95, 0.75, 1.0, sash)
+  } else if (side === 'left') {
+      isoRect(ctx, x, y, h, 0, 0.2, 0.1, 0.8, frame)
+      isoRect(ctx, x, y, h * 0.9, 0, 0.25, 0.05, 0.75, sash)
+  } else if (side === 'right') {
+      isoRect(ctx, x, y, h, 0.9, 0.2, 1.0, 0.8, frame)
+      isoRect(ctx, x, y, h * 0.9, 0.95, 0.25, 1.0, 0.75, sash)
   }
   ctx.restore()
 }
@@ -101,26 +108,29 @@ export function drawDoor(
   y: number,
   h: number,
   side: 'top' | 'right' | 'bottom' | 'left',
-  style: 'basic' = 'basic'
+  style: DoorStyle = 'basic'
 ) {
   ctx.save()
-  const frameColor = '#6a4820'
+  const frameColor = '#503010'
   const doorColor = '#8b5a2b'
+  const handleColor = '#d0d0d0'
   
-  if (style === 'basic') {
-    if (side === 'top') {
-      isoRect(ctx, x, y, h, 0.2, 0, 0.8, 0.15, frameColor)
-      isoRect(ctx, x, y, h * 0.8, 0.25, 0, 0.75, 0.1, doorColor)
-    } else if (side === 'bottom') {
-      isoRect(ctx, x, y, h, 0.2, 0.85, 0.8, 1.0, frameColor)
-      isoRect(ctx, x, y, h * 0.8, 0.25, 0.9, 0.75, 1.0, doorColor)
-    } else if (side === 'left') {
-      isoRect(ctx, x, y, h, 0, 0.2, 0.15, 0.8, frameColor)
-      isoRect(ctx, x, y, h * 0.8, 0, 0.25, 0.1, 0.75, doorColor)
-    } else if (side === 'right') {
-      isoRect(ctx, x, y, h, 0.85, 0.2, 1.0, 0.8, frameColor)
-      isoRect(ctx, x, y, h * 0.8, 0.9, 0.25, 1.0, 0.75, doorColor)
-    }
+  if (side === 'top') {
+    isoRect(ctx, x, y, h, 0.15, 0, 0.85, 0.2, frameColor)
+    isoRect(ctx, x, y, h * 0.9, 0.2, 0, 0.8, 0.15, doorColor)
+    isoRect(ctx, x, y, h * 0.5, 0.75, 0.05, 0.8, 0.08, handleColor)
+  } else if (side === 'bottom') {
+    isoRect(ctx, x, y, h, 0.15, 0.8, 0.85, 1.0, frameColor)
+    isoRect(ctx, x, y, h * 0.9, 0.2, 0.85, 0.8, 1.0, doorColor)
+    isoRect(ctx, x, y, h * 0.5, 0.75, 0.92, 0.8, 0.95, handleColor)
+  } else if (side === 'left') {
+    isoRect(ctx, x, y, h, 0, 0.15, 0.2, 0.85, frameColor)
+    isoRect(ctx, x, y, h * 0.9, 0, 0.2, 0.15, 0.8, doorColor)
+    isoRect(ctx, x, y, h * 0.5, 0.05, 0.75, 0.08, 0.8, handleColor)
+  } else if (side === 'right') {
+    isoRect(ctx, x, y, h, 0.8, 0.15, 1.0, 0.85, frameColor)
+    isoRect(ctx, x, y, h * 0.9, 0.8, 0.2, 1.0, 0.85, doorColor)
+    isoRect(ctx, x, y, h * 0.5, 0.92, 0.75, 0.95, 0.8, handleColor)
   }
   ctx.restore()
 }

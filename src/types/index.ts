@@ -47,11 +47,17 @@ export interface PlacedFurniture {
   colorOverride?: string  // hex color, overrides template color
 }
 
+import { WindowStyle, DoorStyle } from './styles'
+
+// ...
+
 export interface RoomState {
   width: number
   height: number
-  wallHeight: number   // bits, default 3
-  wallColor: string    // hex, default '#2d3050'
-  cells: CellType[][]  // [row][col]
+  wallHeight: number
+  wallColor: string
+  windowStyle: WindowStyle
+  doorStyle: DoorStyle
+  cells: CellType[][]
   furniture: PlacedFurniture[]
 }

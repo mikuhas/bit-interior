@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BitSettings, BitUnit } from '../types'
+import { BitSettings, BitUnit } from '../../types'
 
 interface Props {
   onSave: (settings: BitSettings, roomWidth: number, roomHeight: number) => void
