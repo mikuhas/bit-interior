@@ -12,7 +12,9 @@ interface Props {
   tool: EditTool
   selectedTemplateId: string | null
   furnitureRotation: 0 | 1 | 2 | 3
+  furnitureMirrored: boolean
   doorRotation: 0 | 1 | 2 | 3
+  doorMirrored: boolean
   selectedInstanceId: string | null
   onCellChange: (row: number, col: number, type: CellType) => void
   onPlaceFurniture: (f: PlacedFurniture) => void
@@ -24,7 +26,8 @@ interface Props {
 
 export default function TopDownCanvas(props: Props) {
   const {
-    room, tool, selectedTemplateId, furnitureRotation, doorRotation,
+    room, tool, selectedTemplateId, furnitureRotation, furnitureMirrored, 
+    doorRotation, doorMirrored,
     selectedInstanceId, onCellChange, onPlaceFurniture, onSelectFurniture,
     onMoveFurniture, onInteractionStart, blueprintMode = false
   } = props
@@ -34,7 +37,9 @@ export default function TopDownCanvas(props: Props) {
   const {
     hoverCell, ghostCell, onMouseDown, onMouseMove, onMouseUp, onMouseLeave
   } = useCanvasInteraction({
-    room, tool, selectedTemplateId, furnitureRotation, doorRotation,
+    room, tool, selectedTemplateId, 
+    furnitureRotation, furnitureMirrored,
+    doorRotation, doorMirrored,
     onCellChange, onPlaceFurniture, onSelectFurniture, onMoveFurniture, onInteractionStart
   })
 
@@ -98,7 +103,7 @@ export default function TopDownCanvas(props: Props) {
       for (const pf of room.furniture) {
         const tmpl = getTemplate(pf.templateId)
         if (!tmpl) continue
-        const shape = getEffectiveShape(tmpl, pf.rotation, pf.scaleW ?? 1, pf.scaleH ?? 1)
+        const shape = getEffectiveShape(tmpl, pf.rotation, pf.mirrored ?? false, pf.scaleW ?? 1, pf.scaleH ?? 1)
         const shapeRows = shape.length
         const shapeCols = shape[0]?.length ?? 1
         const isSelected = pf.instanceId === selectedInstanceId
@@ -131,7 +136,7 @@ export default function TopDownCanvas(props: Props) {
       for (const pf of room.furniture) {
         const tmpl = getTemplate(pf.templateId)
         if (!tmpl) continue
-        const shape = getEffectiveShape(tmpl, pf.rotation, pf.scaleW ?? 1, pf.scaleH ?? 1)
+        const shape = getEffectiveShape(tmpl, pf.rotation, pf.mirrored ?? false, pf.scaleW ?? 1, pf.scaleH ?? 1)
         const isSelected = pf.instanceId === selectedInstanceId
         const effectiveColor = pf.colorOverride ?? tmpl.color
         const effectiveTopColor = pf.colorOverride ? lighten(pf.colorOverride, 0.35) : tmpl.topColor
@@ -178,8 +183,8 @@ export default function TopDownCanvas(props: Props) {
     if (tool === 'furniture' && selectedTemplateId && ghostCell) {
       const tmpl = FURNITURE_TEMPLATES.find(t => t.id === selectedTemplateId)
       if (tmpl) {
-        const shape = getEffectiveShape(tmpl, furnitureRotation, 1, 1)
-        const valid = canPlaceFurniture(room, tmpl, ghostCell.x, ghostCell.y, furnitureRotation, undefined, 1, 1)
+        const shape = getEffectiveShape(tmpl, furnitureRotation, furnitureMirrored, 1, 1)
+        const valid = canPlaceFurniture(room, tmpl, ghostCell.x, ghostCell.y, furnitureRotation, furnitureMirrored, undefined, 1, 1)
 
         for (let r = 0; r < shape.length; r++) {
           for (let c = 0; c < shape[r].length; c++) {
@@ -198,7 +203,10 @@ export default function TopDownCanvas(props: Props) {
     }
 
     if (tool === 'door' && hoverCell) {
-      const doorType = (['door','door90','door180','door270'] as CellType[])[doorRotation]
+      let doorType = (['door','door90','door180','door270'] as CellType[])[doorRotation]
+      if (doorMirrored) {
+        doorType = (doorType + 'M') as CellType
+      }
       ctx.save()
       ctx.globalAlpha = 0.45
       drawCell(ctx, hoverCell.col, hoverCell.row, doorType, CELL_SIZE)
@@ -214,7 +222,7 @@ export default function TopDownCanvas(props: Props) {
       ctx.fillStyle = 'rgba(255,255,255,0.07)'
       ctx.fillRect(hoverCell.col * CELL_SIZE, hoverCell.row * CELL_SIZE, CELL_SIZE, CELL_SIZE)
     }
-  }, [room, hoverCell, ghostCell, tool, selectedTemplateId, furnitureRotation, doorRotation, selectedInstanceId, canvasWidth, canvasHeight, blueprintMode])
+  }, [room, hoverCell, ghostCell, tool, selectedTemplateId, furnitureRotation, furnitureMirrored, doorRotation, doorMirrored, selectedInstanceId, canvasWidth, canvasHeight, blueprintMode])
 
   return (
     <canvas

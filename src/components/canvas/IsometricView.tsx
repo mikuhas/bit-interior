@@ -16,7 +16,17 @@ export default function IsometricView({ room, darkMode=true }: Props) {
     const canvas=canvasRef.current; if(!canvas) return
     const ctx=canvas.getContext('2d'); if(!ctx) return
     
-    renderIsometric(ctx, room, canvas.width, canvas.height, wallH, darkMode)
+    let animationFrameId: number
+    const render = (time: number) => {
+      renderIsometric(ctx, room, canvas.width, canvas.height, wallH, darkMode, time)
+      animationFrameId = requestAnimationFrame(render)
+    }
+    
+    animationFrameId = requestAnimationFrame(render)
+    
+    return () => {
+      cancelAnimationFrame(animationFrameId)
+    }
   },[room, wallH, darkMode])
 
   return (

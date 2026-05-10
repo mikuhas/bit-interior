@@ -12,6 +12,7 @@ interface Actions {
   setTool: (t: EditTool) => void
   onDelete?: () => void
   onRotate?: () => void
+  onMirror?: () => void
 }
 
 export function useKeyboardShortcuts(actions: Actions) {
@@ -54,6 +55,7 @@ export function useKeyboardShortcuts(actions: Actions) {
 
       if (e.key === 'Delete' || e.key === 'Backspace') actions.onDelete?.()
       if (key === 'r') actions.onRotate?.()
+      if (key === 'm') actions.onMirror?.()
     }
     
     window.addEventListener('keydown', handler)

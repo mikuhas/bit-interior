@@ -10,10 +10,11 @@ interface Props {
   roomWidth: number
   roomHeight: number
   wallHeight: number
+  doorHeight: number
   wallColor: string
   windowStyle: WindowStyle
   doorStyle: DoorStyle
-  onApply: (settings: BitSettings, wallHeight: number, wallColor: string, roomW: number, roomH: number, windowStyle: WindowStyle, doorStyle: DoorStyle) => void
+  onApply: (settings: BitSettings, wallHeight: number, doorHeight: number, wallColor: string, roomW: number, roomH: number, windowStyle: WindowStyle, doorStyle: DoorStyle) => void
   onCancel: () => void
 }
 
@@ -22,6 +23,7 @@ export default function RoomSettingsPanel({
   roomWidth,
   roomHeight,
   wallHeight,
+  doorHeight,
   wallColor,
   windowStyle,
   doorStyle,
@@ -31,6 +33,7 @@ export default function RoomSettingsPanel({
   const [editBitSize, setEditBitSize] = useState(bitSettings.size)
   const [editBitUnit, setEditBitUnit] = useState<BitUnit>(bitSettings.unit)
   const [editWallHeight, setEditWallHeight] = useState(wallHeight)
+  const [editDoorHeight, setEditDoorHeight] = useState(doorHeight)
   const [editWallColor, setEditWallColor] = useState(wallColor)
   const [editRoomW, setEditRoomW] = useState(roomWidth)
   const [editRoomH, setEditRoomH] = useState(roomHeight)
@@ -41,6 +44,7 @@ export default function RoomSettingsPanel({
     onApply(
       { size: editBitSize, unit: editBitUnit },
       editWallHeight,
+      editDoorHeight,
       editWallColor,
       editRoomW,
       editRoomH,
@@ -94,6 +98,14 @@ export default function RoomSettingsPanel({
         value={editWallHeight}
         onChange={e => setEditWallHeight(parseInt(e.target.value))}
         style={{ width: '100%', accentColor: '#44aaff', marginBottom: 10 }}
+      />
+
+      <div className={styles.label}>ドアの高さ: {editDoorHeight.toFixed(1)} bit</div>
+      <input
+        type="range" min={0.5} max={10} step={0.1}
+        value={editDoorHeight}
+        onChange={e => setEditDoorHeight(parseFloat(e.target.value))}
+        style={{ width: '100%', accentColor: '#44ffaa', marginBottom: 10 }}
       />
 
       <div className={styles.label}>壁の色</div>

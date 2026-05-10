@@ -9,6 +9,7 @@ interface Props {
   onColorChange: (instanceId: string, color: string) => void
   onZChange: (instanceId: string, z: number) => void
   onScaleChange: (instanceId: string, scaleW: number, scaleH: number) => void
+  onMirrorChange: (instanceId: string, mirrored: boolean) => void
 }
 
 const sliderStyle: React.CSSProperties = {
@@ -31,6 +32,7 @@ export default function FurnitureProperties({
   onColorChange,
   onZChange,
   onScaleChange,
+  onMirrorChange,
 }: Props) {
   const selectedInstance = placedFurniture.find(f => f.instanceId === selectedInstanceId)
   const selectedTemplate = selectedInstance ? getTemplate(selectedInstance.templateId) : null
@@ -41,6 +43,7 @@ export default function FurnitureProperties({
   const currentZ = selectedInstance.z ?? 0
   const currentScaleW = selectedInstance.scaleW ?? 1
   const currentScaleH = selectedInstance.scaleH ?? 1
+  const currentMirrored = selectedInstance.mirrored ?? false
 
   const baseCols = selectedTemplate.shape[0]?.length ?? 1
   const baseRows = selectedTemplate.shape.length ?? 1
@@ -102,6 +105,17 @@ export default function FurnitureProperties({
           />
           <button style={pmStyle} onClick={() => onScaleChange(selectedInstanceId, currentScaleW, Math.min(10, currentScaleH + 1))}>+</button>
         </div>
+      </div>
+
+      {/* 左右反転 */}
+      <div style={{ padding: '8px 10px', borderBottom: '1px solid #2a2a4a' }}>
+        <div style={{ fontSize: 7, color: '#00cc88', letterSpacing: 1, marginBottom: 6 }}>TRANSFORM</div>
+        <button 
+          style={{ ...pmStyle, width: 'auto', padding: '2px 8px', fontSize: 7 }} 
+          onClick={() => onMirrorChange(selectedInstanceId, !currentMirrored)}
+        >
+          {currentMirrored ? 'MIRRORED: ON' : 'MIRROR OFF'}
+        </button>
       </div>
 
       {/* カラーピッカー */}

@@ -109,6 +109,15 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
     }))
   }, [])
 
+  const updateFurnitureMirror = useCallback((instanceId: string, mirrored: boolean) => {
+    setRoom(prev => ({
+      ...prev,
+      furniture: prev.furniture.map(f =>
+        f.instanceId === instanceId ? { ...f, mirrored } : f
+      ),
+    }))
+  }, [])
+
   const resizeRoom = useCallback((newWidth: number, newHeight: number) => {
     setRoom(prev => {
       const w = Math.max(2, newWidth)
@@ -127,14 +136,15 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
     setRoom(createInitialRoom(width, height))
   }, [])
 
-  const updateRoomAppearance = useCallback((wallHeight: number, wallColor: string, windowStyle: WindowStyle, doorStyle: DoorStyle) => {
-    setRoom(prev => ({ ...prev, wallHeight, wallColor, windowStyle, doorStyle }))
+  const updateRoomAppearance = useCallback((wallHeight: number, doorHeight: number, wallColor: string, windowStyle: WindowStyle, doorStyle: DoorStyle) => {
+    setRoom(prev => ({ ...prev, wallHeight, doorHeight, wallColor, windowStyle, doorStyle }))
   }, [])
 
   const loadRoom = useCallback((newRoom: RoomState) => {
     const furniture = newRoom.furniture.map(f => ({
       ...f,
       z: f.z ?? 0,
+      mirrored: f.mirrored ?? false,
       scaleW: f.scaleW ?? 1,
       scaleH: f.scaleH ?? 1,
     }))
@@ -142,6 +152,7 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
       ...newRoom,
       furniture,
       wallHeight: newRoom.wallHeight ?? 3,
+      doorHeight: newRoom.doorHeight ?? 2.2,
       wallColor: newRoom.wallColor ?? '#2d3050',
     })
   }, [])
@@ -156,6 +167,7 @@ export function useRoom(initialWidth = 12, initialHeight = 10) {
     updateFurnitureColor,
     updateFurnitureZ,
     updateFurnitureScale,
+    updateFurnitureMirror,
     updateRoomAppearance,
     resizeRoom,
     resetRoom,

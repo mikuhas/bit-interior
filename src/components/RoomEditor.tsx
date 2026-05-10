@@ -26,7 +26,7 @@ interface Props {
 export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWidth, initialHeight }: Props) {
   const {
     room, setCell, updateCell, placeFurniture, moveFurniture, removeFurniture,
-    updateFurnitureColor, updateFurnitureZ, updateFurnitureScale,
+    updateFurnitureColor, updateFurnitureZ, updateFurnitureScale, updateFurnitureMirror,
     updateRoomAppearance, resizeRoom, loadRoom,
     beginInteraction, undo, redo,
   } = useRoom(initialWidth, initialHeight)
@@ -36,7 +36,9 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
     tool, handleSetTool,
     selectedTemplateId, handleSelectTemplate,
     selectedInstanceId, handleSelectInstance,
-    furnitureRotation, doorRotation, rotate,
+    furnitureRotation, furnitureMirrored,
+    doorRotation, doorMirrored,
+    rotate, toggleMirror,
     showSettings, setShowSettings, toggleSettings,
     showHelp, setShowHelp, toggleHelp,
     darkMode, toggleDarkMode,
@@ -59,8 +61,8 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
     undo, redo, onSave: handleSave, 
     onSelectInstance: handleSelectInstance, onSelectTemplate: (id: string | null) => handleSelectTemplate(id ?? ''),
     toggleHelp, setViewMode, setTool: handleSetTool,
-    onDelete: handleDeleteSelected, onRotate: rotate
-  }), [undo, redo, handleSave, handleSelectInstance, handleSelectTemplate, toggleHelp, setViewMode, handleSetTool, handleDeleteSelected, rotate])
+    onDelete: handleDeleteSelected, onRotate: rotate, onMirror: toggleMirror
+  }), [undo, redo, handleSave, handleSelectInstance, handleSelectTemplate, toggleHelp, setViewMode, handleSetTool, handleDeleteSelected, rotate, toggleMirror])
 
   useKeyboardShortcuts(shortcutActions)
 
@@ -78,7 +80,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
       if (!pf) return
       const tmpl = getTemplate(pf.templateId)
       if (!tmpl) return
-      const valid = canPlaceFurniture(room, tmpl, x, y, pf.rotation, id, pf.scaleW ?? 1, pf.scaleH ?? 1)
+      const valid = canPlaceFurniture(room, tmpl, x, y, pf.rotation, pf.mirrored ?? false, id, pf.scaleW ?? 1, pf.scaleH ?? 1)
       if (valid) moveFurniture(id, x, y)
     },
     [room, moveFurniture]
@@ -87,6 +89,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
   const handleApplySettings = useCallback((
     newSettings: BitSettings,
     newWallHeight: number,
+    newDoorHeight: number,
     newWallColor: string,
     newRoomW: number,
     newRoomH: number,
@@ -94,7 +97,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
     newDoorStyle: DoorStyle
   ) => {
     onBitSettingsChange(newSettings)
-    updateRoomAppearance(newWallHeight, newWallColor, newWindowStyle, newDoorStyle)
+    updateRoomAppearance(newWallHeight, newDoorHeight, newWallColor, newWindowStyle, newDoorStyle)
     if (newRoomW !== room.width || newRoomH !== room.height) {
       resizeRoom(newRoomW, newRoomH)
     }
@@ -106,7 +109,12 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
       <Toolbar
         viewMode={viewMode} setViewMode={setViewMode}
         tool={tool} setTool={handleSetTool}
-        furnitureRotation={furnitureRotation} doorRotation={doorRotation} onRotate={rotate}
+        furnitureRotation={furnitureRotation} 
+        furnitureMirrored={furnitureMirrored}
+        doorRotation={doorRotation}
+        doorMirrored={doorMirrored}
+        onRotate={rotate}
+        onMirror={toggleMirror}
         selectedInstanceId={selectedInstanceId} onDeleteSelected={handleDeleteSelected}
         bitSettings={bitSettings} roomSize={{ width: room.width, height: room.height }}
         room={room}
@@ -123,6 +131,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
           roomWidth={room.width}
           roomHeight={room.height}
           wallHeight={room.wallHeight ?? 3}
+          doorHeight={room.doorHeight ?? 2.2}
           wallColor={room.wallColor ?? '#2d3050'}
           windowStyle={room.windowStyle}
           doorStyle={room.doorStyle}
@@ -156,6 +165,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
             onColorChange={updateFurnitureColor}
             onZChange={updateFurnitureZ}
             onScaleChange={updateFurnitureScale}
+            onMirrorChange={updateFurnitureMirror}
           />
         )}
 
@@ -167,7 +177,9 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
               room={room} tool={tool}
               selectedTemplateId={selectedTemplateId}
               furnitureRotation={furnitureRotation}
+              furnitureMirrored={furnitureMirrored}
               doorRotation={doorRotation}
+              doorMirrored={doorMirrored}
               selectedInstanceId={selectedInstanceId}
               onCellChange={setCell}
               onPlaceFurniture={placeFurniture}
@@ -192,6 +204,10 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
                 <span style={{ color: '#7878aa' }}>
                   ROTATE: <span style={{ color: '#e0e0ff' }}>[R]</span> {furnitureRotation * 90}°
                 </span>
+                <span className="sep">|</span>
+                <span style={{ color: '#7878aa' }}>
+                  MIRROR: <span style={{ color: '#e0e0ff' }}>[M]</span> {furnitureMirrored ? 'ON' : 'OFF'}
+                </span>
               </>
             )}
             {selectedInstanceId && tool === 'select' && (
@@ -199,7 +215,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
                 <span className="sep">|</span>
                 <span style={{ color: '#7878aa' }}>
                   SELECTED <span style={{ color: '#ffff00' }}>✓</span>
-                  {' | Z・サイズ・色: ←パネル | '}
+                  {' | Z・サイズ・色・反転: ←パネル | '}
                   <span style={{ color: '#e0e0ff' }}>[DEL]</span> REMOVE
                 </span>
               </>

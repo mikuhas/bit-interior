@@ -15,6 +15,7 @@ interface Props {
   onColorChange: (instanceId: string, color: string) => void
   onZChange: (instanceId: string, z: number) => void
   onScaleChange: (instanceId: string, scaleW: number, scaleH: number) => void
+  onMirrorChange: (instanceId: string, mirrored: boolean) => void
 }
 
 export default function FurniturePanel({
@@ -28,6 +29,7 @@ export default function FurniturePanel({
   onColorChange,
   onZChange,
   onScaleChange,
+  onMirrorChange,
 }: Props) {
   const handleSelect = (id: string) => {
     onSelect(id)
@@ -50,6 +52,7 @@ export default function FurniturePanel({
           onColorChange={onColorChange}
           onZChange={onZChange}
           onScaleChange={onScaleChange}
+          onMirrorChange={onMirrorChange}
         />
       ) : (
         <FurnitureList
@@ -60,7 +63,7 @@ export default function FurniturePanel({
       )}
 
       <div className={styles.footer}>
-        <div>[R] ROTATE</div>
+        <div>[R] ROTATE / [M] MIRROR</div>
         <div>[DEL] REMOVE</div>
       </div>
     </div>

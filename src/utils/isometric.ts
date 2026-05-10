@@ -37,7 +37,8 @@ export function isoRect(
   u1: number,
   v1: number,
   fill: string,
-  stroke?: string
+  stroke?: string,
+  emphasizeEdges = false
 ) {
   ctx.beginPath()
   const [ax, ay] = isoUV(x, y, h, u0, v0)
@@ -46,9 +47,44 @@ export function isoRect(
   const [dx, dy] = isoUV(x, y, h, u0, v1)
   ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx2, cy2); ctx.lineTo(dx, dy)
   ctx.closePath(); ctx.fillStyle = fill; ctx.fill()
+  
   if (stroke) {
     ctx.strokeStyle = stroke; ctx.lineWidth = 0.5; ctx.stroke()
   }
+  
+  if (emphasizeEdges) {
+    ctx.beginPath()
+    ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx2, cy2)
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1.2; ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(cx2, cy2); ctx.lineTo(dx, dy); ctx.lineTo(ax, ay)
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 0.8; ctx.stroke()
+  }
+}
+
+export function drawGrain(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  h: number,
+  u0: number,
+  v0: number,
+  u1: number,
+  v1: number,
+  color: string
+) {
+  ctx.save()
+  ctx.strokeStyle = color
+  ctx.lineWidth = 0.4
+  ctx.globalAlpha = 0.2
+  const count = 4
+  for (let i = 1; i <= count; i++) {
+    const offset = i / (count + 1)
+    const [p1x, p1y] = isoUV(x, y, h, u0 + (u1 - u0) * offset, v0)
+    const [p2x, p2y] = isoUV(x, y, h, u0 + (u1 - u0) * offset, v1)
+    ctx.beginPath(); ctx.moveTo(p1x, p1y); ctx.lineTo(p2x, p2y); ctx.stroke()
+  }
+  ctx.restore()
 }
 
 export function isoLine(
@@ -154,20 +190,65 @@ export function drawDoor(
   y: number,
   h: number,
   side: 'top' | 'right' | 'bottom' | 'left',
-  style: DoorStyle = 'basic'
+  style: DoorStyle = 'basic',
+  progress = 1.0,
+  mirrored = false
 ) {
   ctx.save()
   const doorColor = '#8b5a2b'
   const edgeColor = '#302010'
   const handleColor = '#d0d0d0'
+  const wallH = h // すでにピクセル単位で渡されているため、Z_PXを掛ける必要はありません
 
-  if (style === 'basic') {
-    // 1. ドアパネル: グリッドの1辺を完全に埋める (offset: 0, width: 1.0)
-    drawVerticalFace(ctx, x, y, 0, h, side, 0, 1.0, doorColor, edgeColor)
+  // 支柱（ヒンジ）の位置を定義
+  let hingeU = 0, hingeV = 0
 
-    // 2. ドアノブ: パネルの端から20%の位置 (0.2)
-    const handleOffset = side === 'left' || side === 'bottom' ? 0.2 : 0.75
-    drawVerticalFace(ctx, x, y, h * 0.5, h * 0.6, side, handleOffset, 0.05, handleColor)
+  if (side === 'bottom') { hingeU = mirrored ? 1 : 0; hingeV = 1 }
+  else if (side === 'right') { hingeU = 1; hingeV = mirrored ? 0 : 1 }
+  else if (side === 'top') { hingeU = mirrored ? 0 : 1; hingeV = 0 }
+  else if (side === 'left') { hingeU = 0; hingeV = mirrored ? 1 : 0 }
+
+  const drawPanel = (uStart: number, vStart: number, uEnd: number, vEnd: number) => {
+    const [ax, ay] = isoUV(x, y, 0, uStart, vStart)
+    const [bx, by] = isoUV(x, y, 0, uEnd, vEnd)
+    const [cx, cy] = isoUV(x, y, wallH, uEnd, vEnd)
+    const [dx, dy] = isoUV(x, y, wallH, uStart, vStart)
+    
+    ctx.beginPath()
+    ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx, cy); ctx.lineTo(dx, dy)
+    ctx.closePath()
+    ctx.fillStyle = doorColor
+    ctx.fill()
+    ctx.strokeStyle = edgeColor
+    ctx.lineWidth = 1
+    ctx.stroke()
   }
+
+  // 閉じた状態のターゲット座標
+  let closedU = hingeU, closedV = hingeV
+  if (side === 'bottom') { closedU = mirrored ? 0 : 1; closedV = 1 }
+  else if (side === 'right') { closedU = 1; closedV = mirrored ? 1 : 0 }
+  else if (side === 'top') { closedU = mirrored ? 1 : 0; closedV = 0 }
+  else if (side === 'left') { closedU = 0; closedV = mirrored ? 0 : 1 }
+
+  // 開いた状態のターゲット座標 (45度程度)
+  let openU = hingeU, openV = hingeV
+  if (side === 'bottom') { openU = mirrored ? 0.3 : 0.7; openV = 0.3 }
+  else if (side === 'right') { openU = 0.3; openV = mirrored ? 0.7 : 0.3 }
+  else if (side === 'top') { openU = mirrored ? 0.7 : 0.3; openV = 0.7 }
+  else if (side === 'left') { openU = 0.7; openV = mirrored ? 0.3 : 0.7 }
+
+  // progress (0=closed, 1=open) に基づいて現在のターゲット座標を計算
+  const targetU = closedU + (openU - closedU) * progress
+  const targetV = closedV + (openV - closedV) * progress
+
+  drawPanel(hingeU, hingeV, targetU, targetV)
+
+  // ドアノブ
+  const knobU = hingeU + (targetU - hingeU) * 0.8
+  const knobV = hingeV + (targetV - hingeV) * 0.8
+  const [kx, ky] = isoUV(x, y, wallH * 0.5, knobU, knobV)
+  ctx.beginPath(); ctx.arc(kx, ky, 2, 0, Math.PI * 2); ctx.fillStyle = handleColor; ctx.fill()
+
   ctx.restore()
 }

@@ -41,17 +41,23 @@ export function drawCell(
     return
   }
 
-  if (type === 'door' || type === 'door90' || type === 'door180' || type === 'door270') {
-    const rot = type === 'door' ? 0 : type === 'door90' ? 1 : type === 'door180' ? 2 : 3
+  if (type.startsWith('door')) {
+    const isMirrored = type.endsWith('M')
+    const baseType = isMirrored ? type.slice(0, -1) : type
+    const rot = baseType === 'door' ? 0 : baseType === 'door90' ? 1 : baseType === 'door180' ? 2 : 3
+    
     ctx.fillStyle = '#3d4160'; ctx.fillRect(x, y, cellSize, cellSize)
     ctx.fillStyle = '#5a6080'; ctx.fillRect(x, y, cellSize, 4)
     ctx.fillStyle = '#4d5170'; ctx.fillRect(x, y, 4, cellSize)
     ctx.fillStyle = '#252840'; ctx.fillRect(x, y + cellSize - 4, cellSize, 4)
     ctx.fillStyle = '#2d3050'; ctx.fillRect(x + cellSize - 4, y, 4, cellSize)
+    
     ctx.save()
     ctx.translate(x + cellSize / 2, y + cellSize / 2)
     ctx.rotate((rot * Math.PI) / 2)
+    if (isMirrored) ctx.scale(1, -1)
     ctx.translate(-(x + cellSize / 2), -(y + cellSize / 2))
+    
     ctx.fillStyle = '#1e3357'; ctx.fillRect(x + 4, y + 4, cellSize - 8, cellSize - 8)
     ctx.strokeStyle = '#e8c050'; ctx.lineWidth = 2
     ctx.beginPath(); ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + cellSize - 4, y + 4); ctx.stroke()
@@ -62,27 +68,19 @@ export function drawCell(
   }
 
   if (type === 'window' || type === 'windowTop' || type === 'windowRight' || type === 'windowBottom' || type === 'windowLeft') {
-    ctx.fillStyle = '#1a2d50' // FLOORと同じベースカラー
+    ctx.fillStyle = '#1a2d50'
     ctx.fillRect(x, y, cellSize, cellSize)
-    
-    // ガラス面を少し薄く描画
     ctx.fillStyle = 'rgba(74, 125, 157, 0.5)'
     ctx.fillRect(x, y, cellSize, cellSize)
-    
-    // 枠線を描画
     ctx.strokeStyle = '#2a4868'
     ctx.lineWidth = 2
     ctx.strokeRect(x, y, cellSize, cellSize)
-    
-    // 格子を描画
     ctx.beginPath()
     ctx.moveTo(x + cellSize / 2, y)
     ctx.lineTo(x + cellSize / 2, y + cellSize)
     ctx.moveTo(x, y + cellSize / 2)
     ctx.lineTo(x + cellSize, y + cellSize / 2)
     ctx.stroke()
-    
-    // 設置辺のマークを描画
     ctx.strokeStyle = '#e8c050'
     ctx.lineWidth = 3
     if (type === 'windowTop') ctx.strokeRect(x, y, cellSize, 4)

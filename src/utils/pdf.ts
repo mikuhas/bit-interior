@@ -32,7 +32,8 @@ class BlueprintDrawer {
     this.room.furniture.forEach((f: PlacedFurniture, index: number) => {
       const tmpl = getTemplate(f.templateId);
       this.doc.setFontSize(10);
-      this.doc.text(`${index + 1}. ${tmpl?.nameJa || 'Unknown'}`, 10, y);
+      // 文字化けを避けるため、テンプレートID（英字）を表示
+      this.doc.text(`${index + 1}. ${f.templateId}`, 10, y);
       this.doc.setFontSize(8);
       this.doc.text(
         `Dimensions: ${(f.x * this.settings.size).toFixed(2)} x ${(f.y * this.settings.size).toFixed(2)} ${this.settings.unit}`,
@@ -158,8 +159,29 @@ class BlueprintDrawer {
   }
 
   private drawDoor(x: number, y: number, type: string) {
+    this.doc.setLineWidth(0.3);
+    const s = this.scale;
+    const padding = s * 0.1;
+
+    // 枠
+    this.doc.rect(x, y, s, s);
+
+    // ドア記号
     this.doc.setLineWidth(0.2);
-    this.doc.rect(x, y, this.scale, this.scale);
+
+    if (type === 'door') { // Bottom-Left hinge
+       this.doc.line(x, y + s, x + s, y + s);
+       this.doc.ellipse(x, y + s, s, s, 'S'); // Simple ellipse as arc
+    } else if (type === 'door90') { // Top-Right hinge
+       this.doc.line(x + s, y, x + s, y + s);
+       this.doc.ellipse(x + s, y, s, s, 'S');
+    } else if (type === 'door180') { // Top-Right hinge (rotated)
+       this.doc.line(x + s, y, x, y);
+       this.doc.ellipse(x + s, y, s, s, 'S');
+    } else if (type === 'door270') { // Bottom-Left hinge (rotated)
+       this.doc.line(x, y + s, x, y);
+       this.doc.ellipse(x, y + s, s, s, 'S');
+    }
   }
 
   private drawWindow(x: number, y: number, type: string) {

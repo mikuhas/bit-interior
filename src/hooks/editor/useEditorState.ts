@@ -7,7 +7,9 @@ export function useEditorState() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
   const [furnitureRotation, setFurnitureRotation] = useState<0 | 1 | 2 | 3>(0)
+  const [furnitureMirrored, setFurnitureMirrored] = useState(false)
   const [doorRotation, setDoorRotation] = useState<0 | 1 | 2 | 3>(0)
+  const [doorMirrored, setDoorMirrored] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [darkMode, setDarkMode] = useState(true)
@@ -36,6 +38,14 @@ export function useEditorState() {
     }
   }, [tool])
 
+  const toggleMirror = useCallback(() => {
+    if (tool === 'door') {
+      setDoorMirrored(prev => !prev)
+    } else {
+      setFurnitureMirrored(prev => !prev)
+    }
+  }, [tool])
+
   const toggleSettings = useCallback(() => setShowSettings(s => !s), [])
   const toggleHelp = useCallback(() => setShowHelp(h => !h), [])
   const toggleDarkMode = useCallback(() => setDarkMode(d => !d), [])
@@ -45,7 +55,9 @@ export function useEditorState() {
     tool, handleSetTool,
     selectedTemplateId, handleSelectTemplate,
     selectedInstanceId, handleSelectInstance,
-    furnitureRotation, doorRotation, rotate,
+    furnitureRotation, furnitureMirrored,
+    doorRotation, doorMirrored,
+    rotate, toggleMirror,
     showSettings, setShowSettings, toggleSettings,
     showHelp, setShowHelp, toggleHelp,
     darkMode, toggleDarkMode,

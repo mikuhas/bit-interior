@@ -76,14 +76,23 @@ export function expandShape(shape: boolean[][], scaleW: number, scaleH: number):
   return result
 }
 
-/** 配置前の shape を取得 (rotate → expand) */
+export function mirrorShape(shape: boolean[][]): boolean[][] {
+  return shape.map(row => [...row].reverse())
+}
+
+/** 配置前の shape を取得 (rotate → mirror → expand) */
 export function getEffectiveShape(
   tmpl: FurnitureTemplate,
   rotation: 0 | 1 | 2 | 3,
+  mirrored: boolean,
   scaleW: number,
   scaleH: number
 ): boolean[][] {
-  return expandShape(rotateShape(tmpl.shape, rotation), scaleW, scaleH)
+  let shape = rotateShape(tmpl.shape, rotation)
+  if (mirrored) {
+    shape = mirrorShape(shape)
+  }
+  return expandShape(shape, scaleW, scaleH)
 }
 
 export function canPlaceFurniture(
@@ -92,11 +101,12 @@ export function canPlaceFurniture(
   x: number,
   y: number,
   rotation: 0 | 1 | 2 | 3,
+  mirrored: boolean,
   excludeInstanceId?: string,
   scaleW = 1,
   scaleH = 1
 ): boolean {
-  const shape = getEffectiveShape(template, rotation, scaleW, scaleH)
+  const shape = getEffectiveShape(template, rotation, mirrored, scaleW, scaleH)
   const shapeRows = shape.length
   const shapeCols = shape[0]?.length ?? 0
 
@@ -105,7 +115,7 @@ export function canPlaceFurniture(
     if (pf.instanceId === excludeInstanceId) continue
     const tmpl = getTemplate(pf.templateId)
     if (!tmpl) continue
-    const pfShape = getEffectiveShape(tmpl, pf.rotation, pf.scaleW ?? 1, pf.scaleH ?? 1)
+    const pfShape = getEffectiveShape(tmpl, pf.rotation, pf.mirrored ?? false, pf.scaleW ?? 1, pf.scaleH ?? 1)
     for (let r = 0; r < pfShape.length; r++) {
       for (let c = 0; c < pfShape[r].length; c++) {
         if (pfShape[r][c]) occupiedSet.add(`${pf.y + r},${pf.x + c}`)
@@ -119,7 +129,9 @@ export function canPlaceFurniture(
       const row = y + r
       const col = x + c
       if (row < 0 || row >= room.height || col < 0 || col >= room.width) return false
-      if (room.cells[row][col] !== 'floor' && room.cells[row][col] !== 'autoFloor') return false
+      // 家具の配置を許可するセルタイプ: 床(floor/autoFloor) または 壁(WALL_TYPESに含まれる)
+      const cell = room.cells[row][col]
+      if (cell !== 'floor' && cell !== 'autoFloor' && !WALL_TYPES.has(cell)) return false
       if (occupiedSet.has(`${row},${col}`)) return false
     }
   }
@@ -135,5 +147,5 @@ export function createInitialRoom(width: number, height: number): RoomState {
     }
     cells.push(row)
   }
-  return { width, height, wallHeight: 3, wallColor: '#2d3050', windowStyle: 'basic', doorStyle: 'basic', cells, furniture: [] }
+  return { width, height, wallHeight: 3, doorHeight: 2.2, wallColor: '#2d3050', windowStyle: 'basic', doorStyle: 'basic', cells, furniture: [] }
 }

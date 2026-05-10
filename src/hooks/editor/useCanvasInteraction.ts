@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react'
 import { RoomState, CellType, EditTool, PlacedFurniture } from '../../types'
 import { FURNITURE_TEMPLATES, getTemplate } from '../../data/furniture'
-import { canPlaceFurniture } from '../../utils/room'
+import { canPlaceFurniture, getEffectiveShape } from '../../utils/room'
 
 const CELL_SIZE = 40
 
@@ -10,7 +10,9 @@ interface Options {
   tool: EditTool
   selectedTemplateId: string | null
   furnitureRotation: 0 | 1 | 2 | 3
+  furnitureMirrored: boolean
   doorRotation: 0 | 1 | 2 | 3
+  doorMirrored: boolean
   onCellChange: (row: number, col: number, type: CellType) => void
   onPlaceFurniture: (f: PlacedFurniture) => void
   onSelectFurniture: (id: string | null) => void
@@ -24,7 +26,9 @@ export function useCanvasInteraction({
   tool,
   selectedTemplateId,
   furnitureRotation,
+  furnitureMirrored,
   doorRotation,
+  doorMirrored,
   onCellChange,
   onPlaceFurniture,
   onSelectFurniture,
@@ -51,9 +55,7 @@ export function useCanvasInteraction({
     for (const pf of room.furniture) {
       const tmpl = getTemplate(pf.templateId)
       if (!tmpl) continue
-      // Note: We use the effective shape logic here if needed, but for selection simple bounding box or cell map is usually enough.
-      // Reusing the logic from TopDownCanvas.
-      const shape = getEffectiveShape(tmpl, pf.rotation, pf.scaleW ?? 1, pf.scaleH ?? 1)
+      const shape = getEffectiveShape(tmpl, pf.rotation, pf.mirrored ?? false, pf.scaleW ?? 1, pf.scaleH ?? 1)
       for (let r = 0; r < shape.length; r++) {
         for (let c = 0; c < shape[r].length; c++) {
           if (shape[r][c] && pf.y + r === row && pf.x + c === col) {
@@ -90,15 +92,20 @@ export function useCanvasInteraction({
 
     if (wallTypes.includes(tool)) {
       mouseDownRef.current = true
-      const newType: CellType = 
+      let newType: CellType = 
         tool === 'door' ? (['door', 'door90', 'door180', 'door270'] as CellType[])[doorRotation]
         : (tool as CellType)
+      
+      if (doorMirrored && newType.startsWith('door')) {
+        newType = (newType + 'M') as CellType
+      }
+      
       paintTypeRef.current = newType
       onCellChange(row, col, newType)
     } else if (tool === 'furniture' && selectedTemplateId && ghostCell) {
       const tmpl = FURNITURE_TEMPLATES.find(t => t.id === selectedTemplateId)
       if (tmpl) {
-        const valid = canPlaceFurniture(room, tmpl, ghostCell.x, ghostCell.y, furnitureRotation)
+        const valid = canPlaceFurniture(room, tmpl, ghostCell.x, ghostCell.y, furnitureRotation, furnitureMirrored)
         if (valid) {
           onPlaceFurniture({
             instanceId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -107,6 +114,7 @@ export function useCanvasInteraction({
             y: ghostCell.y,
             z: 0,
             rotation: furnitureRotation,
+            mirrored: furnitureMirrored,
             scaleW: 1,
             scaleH: 1,
           })
@@ -125,7 +133,7 @@ export function useCanvasInteraction({
         onSelectFurniture(null)
       }
     }
-  }, [tool, selectedTemplateId, ghostCell, room, furnitureRotation, doorRotation, onCellChange, onPlaceFurniture, onSelectFurniture, getFurnitureAt, onInteractionStart, getCellFromEvent])
+  }, [tool, selectedTemplateId, ghostCell, room, furnitureRotation, furnitureMirrored, doorRotation, doorMirrored, onCellChange, onPlaceFurniture, onSelectFurniture, getFurnitureAt, onInteractionStart, getCellFromEvent])
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const cell = getCellFromEvent(e)
@@ -161,7 +169,7 @@ export function useCanvasInteraction({
       if (pf) {
         const tmpl = getTemplate(pf.templateId)
         if (tmpl) {
-          const valid = canPlaceFurniture(room, tmpl, newX, newY, pf.rotation, instanceId)
+          const valid = canPlaceFurniture(room, tmpl, newX, newY, pf.rotation, pf.mirrored ?? false, instanceId, pf.scaleW ?? 1, pf.scaleH ?? 1)
           if (valid) {
             onMoveFurniture(instanceId, newX, newY)
           }
@@ -191,6 +199,3 @@ export function useCanvasInteraction({
     onMouseLeave,
   }
 }
-
-// Internal helper needed by getFurnitureAt
-import { getEffectiveShape } from '../../utils/room'

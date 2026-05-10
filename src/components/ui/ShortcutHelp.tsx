@@ -19,6 +19,7 @@ const GROUPS = [
     { key: 'Ctrl+Z', desc: 'Undo' },
     { key: 'Ctrl+S', desc: 'Save' },
     { key: 'R',      desc: 'Rotate' },
+    { key: 'M',      desc: 'Mirror' },
     { key: 'Del',    desc: 'Delete' },
     { key: 'Esc',    desc: 'Deselect' },
     { key: '?',      desc: 'This list' },
