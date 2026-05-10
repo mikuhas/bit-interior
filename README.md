@@ -51,6 +51,7 @@ src/
     ```bash
     npm run build
     ```
+    - ビルドされた JavaScript および CSS アセットは `dist/assets` ディレクトリに出力されます。
 
 ## 開発ガイドライン
 

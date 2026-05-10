@@ -2,14 +2,11 @@ import { jsPDF } from 'jspdf';
 import { RoomState, BitSettings, PlacedFurniture } from '../types';
 import { getTemplate } from '../data/furniture';
 
-/**
- * 図面の描画設定とロジックを管理するクラス
- */
 class BlueprintDrawer {
   private doc: jsPDF;
   private room: RoomState;
   private settings: BitSettings;
-  private scale: number = 10; // 1bit = 10mm
+  private scale: number = 10;
   private startX: number = 20;
   private startY: number = 30;
 
@@ -66,28 +63,123 @@ class BlueprintDrawer {
     this.doc.rect(this.startX, this.startY, this.room.width * this.scale, this.room.height * this.scale);
   }
 
-  private drawWalls() {
-    this.doc.setLineWidth(1.0);
+  private findEnclosedRegions(): Set<string>[] {
+    const visited = new Set<string>();
+    const regions: Set<string>[] = [];
+
     for (let r = 0; r < this.room.height; r++) {
       for (let c = 0; c < this.room.width; c++) {
-        const cell = this.room.cells[r][c];
-        if (this.isWall(cell)) {
-          const x = this.startX + c * this.scale;
-          const y = this.startY + r * this.scale;
-          this.doc.rect(x, y, this.scale, this.scale);
+        if ((this.room.cells[r][c] === 'floor' || this.room.cells[r][c] === 'autoFloor') && !visited.has(`${r},${c}`)) {
+          const region = new Set<string>();
+          const stack: [number, number][] = [[r, c]];
+          while (stack.length > 0) {
+            const [currR, currC] = stack.pop()!;
+            const key = `${currR},${currC}`;
+            if (visited.has(key)) continue;
+            visited.add(key);
+            region.add(key);
+
+            [[0, 1], [0, -1], [1, 0], [-1, 0]].forEach(([dr, dc]) => {
+              const nr = currR + dr, nc = currC + dc;
+              if (nr >= 0 && nr < this.room.height && nc >= 0 && nc < this.room.width) {
+                const cell = this.room.cells[nr][nc];
+                if (cell === 'floor' || cell === 'autoFloor') stack.push([nr, nc]);
+              }
+            });
+          }
+          regions.push(region);
         }
       }
     }
+    return regions;
   }
 
-  private isWall(cell: string): boolean {
-    return !['empty', 'floor', 'autoFloor'].includes(cell);
+  private drawWalls() {
+    this.doc.setLineWidth(0.3);
+    const regions = this.findEnclosedRegions();
+    const floorCells = new Set<string>();
+    regions.forEach(r => r.forEach(c => floorCells.add(c)));
+
+    for (let r = 0; r < this.room.height; r++) {
+      for (let c = 0; c < this.room.width; c++) {
+        const cell = this.room.cells[r][c];
+        if (!cell.startsWith('wall') && !cell.startsWith('door') && !cell.startsWith('window')) continue;
+
+        if (this.isWallAdjacentToFloors(r, c, floorCells)) {
+            const x = this.startX + c * this.scale;
+            const y = this.startY + r * this.scale;
+            if (cell.startsWith('wall')) this.drawEdgeWall(x, y, cell);
+            else if (cell.startsWith('door')) this.drawDoor(x, y, cell);
+            else if (cell.startsWith('window')) this.drawWindow(x, y, cell);
+        }
+      }
+    }
+    this.drawDimensions(regions);
+  }
+
+  private isWallAdjacentToFloors(r: number, c: number, floorSet: Set<string>): boolean {
+    return [[0,1],[0,-1],[1,0],[-1,0]].some(([dr, dc]) => floorSet.has(`${r+dr},${c+dc}`));
+  }
+
+  private drawDimensions(regions: Set<string>[]) {
+    this.doc.setFontSize(5);
+    this.doc.setTextColor(50);
+
+    regions.forEach(region => {
+      let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+      region.forEach(key => {
+        const [r, c] = key.split(',').map(Number);
+        minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+        minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+      });
+
+      const width = (maxC - minC + 1) * this.settings.size;
+      const height = (maxR - minR + 1) * this.settings.size;
+      const text = `${width.toFixed(0)} x ${height.toFixed(0)} ${this.settings.unit}`;
+      
+      const centerX = this.startX + (minC + (maxC - minC) / 2 + 0.5) * this.scale;
+      const centerY = this.startY + (minR + (maxR - minR) / 2 + 0.5) * this.scale;
+      this.doc.text(text, centerX, centerY, { align: 'center' });
+    });
+  }
+
+  private drawEdgeWall(x: number, y: number, type: string) {
+    const th = this.scale * 0.15;
+    const hasTop = type.includes('Top') || type.includes('Full') || type === 'wall';
+    const hasRight = type.includes('Right') || type.includes('Full') || type === 'wall';
+    const hasBottom = type.includes('Bottom') || type.includes('Full') || type === 'wall';
+    const hasLeft = type.includes('Left') || type.includes('Full') || type === 'wall';
+
+    this.doc.setLineWidth(th);
+    if (hasTop) this.doc.line(x, y, x + this.scale, y);
+    if (hasRight) this.doc.line(x + this.scale, y, x + this.scale, y + this.scale);
+    if (hasBottom) this.doc.line(x, y + this.scale, x + this.scale, y + this.scale);
+    if (hasLeft) this.doc.line(x, y, x, y + this.scale);
+  }
+
+  private drawDoor(x: number, y: number, type: string) {
+    this.doc.setLineWidth(0.2);
+    this.doc.rect(x, y, this.scale, this.scale);
+  }
+
+  private drawWindow(x: number, y: number, type: string) {
+    this.doc.setLineWidth(0.3);
+    if (type.includes('Top')) {
+       this.doc.line(x, y, x + this.scale, y);
+       this.doc.line(x + this.scale * 0.2, y - 1, x + this.scale * 0.8, y - 1);
+    } else if (type.includes('Bottom')) {
+       this.doc.line(x, y + this.scale, x + this.scale, y + this.scale);
+       this.doc.line(x + this.scale * 0.2, y + this.scale + 1, x + this.scale * 0.8, y + this.scale + 1);
+    } else if (type.includes('Left')) {
+       this.doc.line(x, y, x, y + this.scale);
+       this.doc.line(x - 1, y + this.scale * 0.2, x - 1, y + this.scale * 0.8);
+    } else if (type.includes('Right')) {
+       this.doc.line(x + this.scale, y, x + this.scale, y + this.scale);
+       this.doc.line(x + this.scale + 1, y + this.scale * 0.2, x + this.scale + 1, y + this.scale * 0.8);
+    }
   }
 }
 
-/**
- * PDF生成エントリーポイント
- */
 export function generateRoomPDF(room: RoomState, bitSettings: BitSettings, includeFurniture: boolean) {
   const drawer = new BlueprintDrawer(room, bitSettings);
   drawer.draw();

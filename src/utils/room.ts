@@ -1,7 +1,17 @@
 import { RoomState, CellType, FurnitureTemplate, PlacedFurniture } from '../types'
 import { getTemplate } from '../data/furniture'
 
-const WALL_TYPES = new Set<CellType>(['wall', 'wallX', 'wallY', 'wallTop', 'wallRight', 'wallBottom', 'wallLeft', 'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft', 'door', 'door90', 'door180', 'door270', 'window', 'windowTop', 'windowRight', 'windowBottom', 'windowLeft'])
+const EDGES = ['Top', 'Right', 'Bottom', 'Left'] as const;
+const WALL_BASE = ['wall', 'wallX', 'wallY', 'wallFull'] as const;
+const WALL_EDGES = EDGES.map(e => `wall${e}`) as CellType[];
+const WALL_MULTI = ['TopRight', 'TopLeft', 'BottomRight', 'BottomLeft', 'TopBottom', 'LeftRight', 
+                    'TopRightBottom', 'RightBottomLeft', 'BottomLeftTop', 'LeftTopRight'].map(e => `wall${e}`) as CellType[];
+const DOOR_TYPES = ['door', 'door90', 'door180', 'door270'] as CellType[];
+const WINDOW_TYPES = ['window', ...EDGES.map(e => `window${e}`)] as CellType[];
+
+export const WALL_TYPES = new Set<CellType>([
+  ...WALL_BASE, ...WALL_EDGES, ...WALL_MULTI, ...DOOR_TYPES, ...WINDOW_TYPES
+]);
 
 export function detectAutoFloor(cells: CellType[][], width: number, height: number): CellType[][] {
   const reachable: boolean[][] = Array.from({ length: height }, () => Array(width).fill(false))

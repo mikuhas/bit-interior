@@ -35,7 +35,13 @@ const BASE_TOOLS: { id: EditTool; label: string }[] = [
   { id: 'furniture', label: 'PLACE' },
 ]
 
-const WALL_TOOLS: EditTool[] = ['wallTop', 'wallRight', 'wallBottom', 'wallLeft', 'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft']
+const WALL_TOOLS: EditTool[] = [
+  'wall', 'wallX', 'wallY', 'wallTop', 'wallRight', 'wallBottom', 'wallLeft',
+  'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft',
+  'wallTopBottom', 'wallLeftRight',
+  'wallTopRightBottom', 'wallRightBottomLeft', 'wallBottomLeftTop', 'wallLeftTopRight',
+  'wallFull'
+]
 const WINDOW_TOOLS: EditTool[] = ['window', 'windowTop', 'windowRight', 'windowBottom', 'windowLeft']
 
 function WindowEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: EditTool; onSelect: (t: EditTool) => void; onClose: () => void }) {
@@ -176,15 +182,8 @@ function WallEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: Edi
     if (selectedEdges.includes(edge)) {
       next = selectedEdges.filter(e => e !== edge)
     } else {
-      const isParallel = (e1: string, e2: string) => 
-        (e1 === 'top' && e2 === 'bottom') || (e1 === 'bottom' && e2 === 'top') ||
-        (e1 === 'left' && e2 === 'right') || (e1 === 'right' && e2 === 'left')
-
-      if (selectedEdges.length === 1 && isParallel(selectedEdges[0], edge)) {
-        next = [edge]
-      } else {
-        next = [...selectedEdges, edge].slice(-2)
-      }
+      // 独立したトグルに変更（平行チェックを削除）
+      next = [...selectedEdges, edge]
     }
     
     if (next.length === 0) {
@@ -196,6 +195,35 @@ function WallEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: Edi
     const key = order.filter(o => next.includes(o)).join(',')
     const tool = EDGE_MAP[key]
     if (tool) onSelect(tool)
+  }
+
+  const WINDOW_MAP: Record<string, EditTool> = {
+    'top': 'windowTop',
+    'right': 'windowRight',
+    'bottom': 'windowBottom',
+    'left': 'windowLeft',
+  }
+
+  // WindowEdgeSelector のロジック修正
+  const toggleWindowEdge = (edge: string) => {
+    // 窓の場合はツールがウィンドウタイプか判定が必要
+    // 既存の currentTool を利用して選択状態を計算
+    const selectedWindowEdges = WINDOW_TOOLS.includes(currentTool) 
+      ? Object.keys(WINDOW_MAP).filter(k => WINDOW_MAP[k] === currentTool).flatMap(k => k.split(','))
+      : []
+
+    let next: string[] = []
+    if (selectedWindowEdges.includes(edge)) {
+      next = selectedWindowEdges.filter((e: string) => e !== edge)
+    } else {
+      next = [...selectedWindowEdges, edge]
+    }
+    
+    const order = ['top', 'right', 'bottom', 'left']
+    const key = order.filter(o => next.includes(o)).join(',')
+    const tool = WINDOW_MAP[key]
+    if (tool) onSelect(tool)
+    else if (next.length === 0) onSelect('window')
   }
 
   const btnStyle = (edge: string, baseStyle: React.CSSProperties): React.CSSProperties => ({
@@ -282,6 +310,24 @@ function Toolbar({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showWallPicker, setShowWallPicker] = useState(false)
   const [showWindowPicker, setShowWindowPicker] = useState(false)
+
+  const openWallPicker = () => {
+    setShowWallPicker(true)
+    setShowWindowPicker(false)
+  }
+
+  const openWindowPicker = () => {
+    setShowWindowPicker(true)
+    setShowWallPicker(false)
+  }
+
+  // WallEdgeSelector/WindowEdgeSelector を呼び出すボタンの onClick を修正
+  // <button onClick={openWallPicker}>WALL</button>
+  // <button onClick={openWindowPicker}>WIN</button>
+
+  // WallEdgeSelector 内で、選択時に setTool を適切に呼び出すように修正
+  // 選択時 (toggleEdge) に setTool('wall...') を呼び出せば自動的に配置モードになるはず
+
   const [showPDFModal, setShowPDFModal] = useState(false)
   const isWallActive = WALL_TOOLS.includes(tool)
   const isWindowActive = WINDOW_TOOLS.includes(tool)
@@ -326,7 +372,7 @@ function Toolbar({
 
             <button
               className={`pixel-btn ${isWallActive ? 'active' : ''}`}
-              onClick={() => setShowWallPicker(true)}
+              onClick={openWallPicker}
             >WALL</button>
             {showWallPicker && (
               <WallEdgeSelector currentTool={tool} onSelect={setTool} onClose={() => setShowWallPicker(false)} />
@@ -334,7 +380,7 @@ function Toolbar({
 
             <button
               className={`pixel-btn ${isWindowActive ? 'active' : ''}`}
-              onClick={() => setShowWindowPicker(true)}
+              onClick={openWindowPicker}
             >WIN</button>
             {showWindowPicker && (
               <WindowEdgeSelector currentTool={tool} onSelect={setTool} onClose={() => setShowWindowPicker(false)} />

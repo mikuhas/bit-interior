@@ -76,35 +76,25 @@ export function useCanvasInteraction({
         return
     }
 
+    const EDGES = ['Top', 'Right', 'Bottom', 'Left'] as const;
+    const WALL_BASE = ['wall', 'wallX', 'wallY', 'wallFull'] as const;
+    const WALL_EDGES = EDGES.map(e => `wall${e}`);
+    const WALL_MULTI = ['TopRight', 'TopLeft', 'BottomRight', 'BottomLeft', 'TopBottom', 'LeftRight', 
+                        'TopRightBottom', 'RightBottomLeft', 'BottomLeftTop', 'LeftTopRight'].map(e => `wall${e}`);
+    const DOOR_TYPES = ['door', 'door90', 'door180', 'door270'];
+    const WINDOW_TYPES = ['window', ...EDGES.map(e => `window${e}`)];
+
     const wallTypes = [
-        'floor', 'wallX', 'wallY', 'wallTop', 'wallRight', 'wallBottom', 'wallLeft',
-        'wallTopRight', 'wallTopLeft', 'wallBottomRight', 'wallBottomLeft', 'door', 'window', 
-        'windowTop', 'windowRight', 'windowBottom', 'windowLeft', 'erase'
-      ]
+      ...WALL_BASE, ...WALL_EDGES, ...WALL_MULTI, ...DOOR_TYPES, ...WINDOW_TYPES, 'erase'
+    ] as string[]
 
     if (wallTypes.includes(tool)) {
       mouseDownRef.current = true
-      const newType: CellType =
-        tool === 'floor' ? 'floor'
-        : tool === 'wallX' ? 'wallX'
-        : tool === 'wallY' ? 'wallY'
-        : tool === 'wallTop' ? 'wallTop'
-        : tool === 'wallRight' ? 'wallRight'
-        : tool === 'wallBottom' ? 'wallBottom'
-        : tool === 'wallLeft' ? 'wallLeft'
-        : tool === 'wallTopRight' ? 'wallTopRight'
-        : tool === 'wallTopLeft' ? 'wallTopLeft'
-        : tool === 'wallBottomRight' ? 'wallBottomRight'
-        : tool === 'wallBottomLeft' ? 'wallBottomLeft'
-        : tool === 'door' ? (['door', 'door90', 'door180', 'door270'] as CellType[])[doorRotation]
-        : tool === 'window' ? 'window'
-        : tool === 'windowTop' ? 'windowTop'
-        : tool === 'windowRight' ? 'windowRight'
-        : tool === 'windowBottom' ? 'windowBottom'
-        : tool === 'windowLeft' ? 'windowLeft'
-        : 'empty'
+      const newType: CellType = 
+        tool === 'door' ? (['door', 'door90', 'door180', 'door270'] as CellType[])[doorRotation]
+        : (tool as CellType)
       paintTypeRef.current = newType
-      onCellChange(row, col, newType) // クリック時の設置を有効化
+      onCellChange(row, col, newType)
     } else if (tool === 'furniture' && selectedTemplateId && ghostCell) {
       const tmpl = FURNITURE_TEMPLATES.find(t => t.id === selectedTemplateId)
       if (tmpl) {
