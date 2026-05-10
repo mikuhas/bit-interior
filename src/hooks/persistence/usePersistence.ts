@@ -4,7 +4,7 @@ import { saveToLocalStorage, loadFromLocalStorage, exportAsJson, importFromJson 
 
 export const useSaveRoomMutation = () => {
   return useMutation({
-    mutationFn: ({ bitSettings, room }: { bitSettings: BitSettings, room: RoomState }) => {
+    mutationFn: async ({ bitSettings, room }: { bitSettings: BitSettings, room: RoomState }) => {
       saveToLocalStorage(bitSettings, room)
     },
   })
@@ -21,7 +21,7 @@ export const useLoadRoomQuery = (enabled: boolean = false) => {
 
 export const useExportRoomMutation = () => {
   return useMutation({
-    mutationFn: ({ bitSettings, room }: { bitSettings: BitSettings, room: RoomState }) => {
+    mutationFn: async ({ bitSettings, room }: { bitSettings: BitSettings, room: RoomState }) => {
       exportAsJson(bitSettings, room)
     },
   })
@@ -29,6 +29,6 @@ export const useExportRoomMutation = () => {
 
 export const useImportRoomMutation = () => {
   return useMutation({
-    mutationFn: (file: File) => importFromJson(file),
+    mutationFn: async (file: File) => importFromJson(file),
   })
 }

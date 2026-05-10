@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, memo } from 'react'
 import { ViewMode, EditTool, BitSettings } from '../../types'
 import { PDFSettingsModal } from './PDFSettingsModal'
 
@@ -260,7 +260,10 @@ function WallEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: Edi
   )
 }
 
-export default function Toolbar({
+const MemoizedToolbar = memo(Toolbar)
+export default MemoizedToolbar;
+
+function Toolbar({
   viewMode,
   setViewMode,
   tool,

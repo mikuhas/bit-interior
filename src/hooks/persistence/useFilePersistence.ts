@@ -35,9 +35,10 @@ export function useFilePersistence({
 
   const handleLoad = useCallback(async () => {
     const data = await loadQuery.refetch()
-    if (data.data) {
-      onRoomLoad(data.data.room)
-      if (data.data.bitSettings) onSettingsLoad(data.bitSettings)
+    if (data.data && typeof data.data === 'object' && 'room' in data.data) {
+      const payload = data.data as { room: RoomState, bitSettings?: BitSettings }
+      onRoomLoad(payload.room)
+      if (payload.bitSettings) onSettingsLoad(payload.bitSettings)
     }
   }, [loadQuery, onRoomLoad, onSettingsLoad])
 
