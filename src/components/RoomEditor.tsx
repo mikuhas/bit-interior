@@ -50,8 +50,9 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
   const shortcutActions = useMemo(() => ({
     undo, redo, onSave: handleSave, 
     onSelectInstance: handleSelectInstance, onSelectTemplate: (id: string | null) => handleSelectTemplate(id ?? ''),
-    toggleHelp, setViewMode, setTool: handleSetTool
-  }), [undo, redo, handleSave, handleSelectInstance, handleSelectTemplate, toggleHelp, setViewMode, handleSetTool])
+    toggleHelp, setViewMode, setTool: handleSetTool,
+    onDelete: handleDeleteSelected, onRotate: rotate
+  }), [undo, redo, handleSave, handleSelectInstance, handleSelectTemplate, toggleHelp, setViewMode, handleSetTool, handleDeleteSelected, rotate])
 
   useKeyboardShortcuts(shortcutActions)
 
@@ -182,9 +183,6 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
               onPlaceFurniture={placeFurniture}
               onSelectFurniture={handleSelectInstance}
               onMoveFurniture={handleMoveFurniture}
-              onKeyDelete={handleDeleteSelected}
-              onRotate={rotate}
-              onRotateCell={rotateCell}
               onInteractionStart={beginInteraction}
               blueprintMode={viewMode === 'blueprint'}
             />

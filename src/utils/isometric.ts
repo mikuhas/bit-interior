@@ -102,6 +102,52 @@ export function drawWindow(
   ctx.restore()
 }
 
+export function drawVerticalFace(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  z1: number,
+  z2: number,
+  side: 'top' | 'right' | 'bottom' | 'left',
+  offset: number,
+  width: number,
+  fill: string,
+  stroke?: string
+) {
+  ctx.beginPath()
+  // 基準となる座標をサイドに応じて計算
+  // 簡易的にisoUVのUV座標を操作して4点を得る
+  // sideに応じて面の方向を計算する必要がある
+  // 今回はwall描画と同様の論理で構築します
+  const getP = (u: number, v: number, z: number) => isoUV(x, y, z * Z_PX, u, v)
+
+  // Sideごとの頂点定義
+  // u, v の範囲は 0-1
+  let points: [number, number][] = []
+  if (side === 'top') {
+    points = [getP(offset, 0, z1), getP(offset + width, 0, z1), getP(offset + width, 0, z2), getP(offset, 0, z2)]
+  } else if (side === 'bottom') {
+    points = [getP(offset, 1, z1), getP(offset + width, 1, z1), getP(offset + width, 1, z2), getP(offset, 1, z2)]
+  } else if (side === 'left') {
+    points = [getP(0, offset, z1), getP(0, offset + width, z1), getP(0, offset + width, z2), getP(0, offset, z2)]
+  } else if (side === 'right') {
+    points = [getP(1, offset, z1), getP(1, offset + width, z1), getP(1, offset + width, z2), getP(1, offset, z2)]
+  }
+
+  ctx.moveTo(points[0][0], points[0][1])
+  ctx.lineTo(points[1][0], points[1][1])
+  ctx.lineTo(points[2][0], points[2][1])
+  ctx.lineTo(points[3][0], points[3][1])
+  ctx.closePath()
+  ctx.fillStyle = fill
+  ctx.fill()
+  if (stroke) {
+    ctx.strokeStyle = stroke
+    ctx.lineWidth = 1
+    ctx.stroke()
+  }
+}
+
 export function drawDoor(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -111,26 +157,17 @@ export function drawDoor(
   style: DoorStyle = 'basic'
 ) {
   ctx.save()
-  const frameColor = '#503010'
   const doorColor = '#8b5a2b'
+  const edgeColor = '#302010'
   const handleColor = '#d0d0d0'
-  
-  if (side === 'top') {
-    isoRect(ctx, x, y, h, 0.15, 0, 0.85, 0.2, frameColor)
-    isoRect(ctx, x, y, h * 0.9, 0.2, 0, 0.8, 0.15, doorColor)
-    isoRect(ctx, x, y, h * 0.5, 0.75, 0.05, 0.8, 0.08, handleColor)
-  } else if (side === 'bottom') {
-    isoRect(ctx, x, y, h, 0.15, 0.8, 0.85, 1.0, frameColor)
-    isoRect(ctx, x, y, h * 0.9, 0.2, 0.85, 0.8, 1.0, doorColor)
-    isoRect(ctx, x, y, h * 0.5, 0.75, 0.92, 0.8, 0.95, handleColor)
-  } else if (side === 'left') {
-    isoRect(ctx, x, y, h, 0, 0.15, 0.2, 0.85, frameColor)
-    isoRect(ctx, x, y, h * 0.9, 0, 0.2, 0.15, 0.8, doorColor)
-    isoRect(ctx, x, y, h * 0.5, 0.05, 0.75, 0.08, 0.8, handleColor)
-  } else if (side === 'right') {
-    isoRect(ctx, x, y, h, 0.8, 0.15, 1.0, 0.85, frameColor)
-    isoRect(ctx, x, y, h * 0.9, 0.8, 0.2, 1.0, 0.85, doorColor)
-    isoRect(ctx, x, y, h * 0.5, 0.92, 0.75, 0.95, 0.8, handleColor)
+
+  if (style === 'basic') {
+    // 1. ドアパネル: グリッドの1辺を完全に埋める (offset: 0, width: 1.0)
+    drawVerticalFace(ctx, x, y, 0, h, side, 0, 1.0, doorColor, edgeColor)
+
+    // 2. ドアノブ: パネルの端から20%の位置 (0.2)
+    const handleOffset = side === 'left' || side === 'bottom' ? 0.2 : 0.75
+    drawVerticalFace(ctx, x, y, h * 0.5, h * 0.6, side, handleOffset, 0.05, handleColor)
   }
   ctx.restore()
 }

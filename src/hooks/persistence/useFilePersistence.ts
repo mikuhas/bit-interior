@@ -1,6 +1,11 @@
 import { useCallback } from 'react'
 import { BitSettings, RoomState } from '../../types'
-import { saveToLocalStorage, loadFromLocalStorage, exportAsJson, importFromJson } from '../../utils/save'
+import { 
+  useSaveRoomMutation, 
+  useLoadRoomQuery, 
+  useExportRoomMutation, 
+  useImportRoomMutation 
+} from './usePersistence'
 
 interface Options {
   bitSettings: BitSettings
@@ -17,32 +22,38 @@ export function useFilePersistence({
   onSettingsLoad,
   onFlash,
 }: Options) {
-  const handleSave = useCallback(() => {
-    saveToLocalStorage(bitSettings, room)
-    onFlash()
-  }, [bitSettings, room, onFlash])
+  const saveMutation = useSaveRoomMutation()
+  const exportMutation = useExportRoomMutation()
+  const importMutation = useImportRoomMutation()
+  
+  // Load Query is manual, so we trigger refetch via manual interaction
+  const loadQuery = useLoadRoomQuery(false)
 
-  const handleLoad = useCallback(() => {
-    const data = loadFromLocalStorage()
-    if (data) {
-      onRoomLoad(data.room)
-      if (data.bitSettings) onSettingsLoad(data.bitSettings)
+  const handleSave = useCallback(() => {
+    saveMutation.mutate({ bitSettings, room }, { onSuccess: onFlash })
+  }, [bitSettings, room, onFlash, saveMutation])
+
+  const handleLoad = useCallback(async () => {
+    const data = await loadQuery.refetch()
+    if (data.data) {
+      onRoomLoad(data.data.room)
+      if (data.data.bitSettings) onSettingsLoad(data.bitSettings)
     }
-  }, [onRoomLoad, onSettingsLoad])
+  }, [loadQuery, onRoomLoad, onSettingsLoad])
 
   const handleExport = useCallback(() => {
-    exportAsJson(bitSettings, room)
-  }, [bitSettings, room])
+    exportMutation.mutate({ bitSettings, room })
+  }, [bitSettings, room, exportMutation])
 
   const handleImport = useCallback(async (file: File) => {
     try {
-      const data = await importFromJson(file)
+      const data = await importMutation.mutateAsync(file)
       onRoomLoad(data.room)
       if (data.bitSettings) onSettingsLoad(data.bitSettings)
     } catch (e) {
       console.error('Import failed', e)
     }
-  }, [onRoomLoad, onSettingsLoad])
+  }, [importMutation, onRoomLoad, onSettingsLoad])
 
   return {
     handleSave,

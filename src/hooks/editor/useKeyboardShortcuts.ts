@@ -10,6 +10,8 @@ interface Actions {
   toggleHelp: () => void
   setViewMode: (m: ViewMode) => void
   setTool: (t: EditTool) => void
+  onDelete?: () => void
+  onRotate?: () => void
 }
 
 export function useKeyboardShortcuts(actions: Actions) {
@@ -49,6 +51,9 @@ export function useKeyboardShortcuts(actions: Actions) {
       else if (key === 'e') actions.setTool('erase')
       else if (key === 's' && !ctrl) actions.setTool('select')
       else if (key === 'p') actions.setTool('furniture')
+
+      if (e.key === 'Delete' || e.key === 'Backspace') actions.onDelete?.()
+      if (key === 'r') actions.onRotate?.()
     }
     
     window.addEventListener('keydown', handler)

@@ -18,9 +18,6 @@ interface Props {
   onPlaceFurniture: (f: PlacedFurniture) => void
   onSelectFurniture: (id: string | null) => void
   onMoveFurniture: (id: string, x: number, y: number) => void
-  onKeyDelete?: () => void
-  onRotate?: () => void
-  onRotateCell?: (row: number, col: number) => void
   onInteractionStart?: () => void
   blueprintMode?: boolean
 }
@@ -29,7 +26,7 @@ export default function TopDownCanvas(props: Props) {
   const {
     room, tool, selectedTemplateId, furnitureRotation, doorRotation,
     selectedInstanceId, onCellChange, onPlaceFurniture, onSelectFurniture,
-    onMoveFurniture, onKeyDelete, onRotate, onRotateCell, onInteractionStart, blueprintMode = false
+    onMoveFurniture, onInteractionStart, blueprintMode = false
   } = props
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -38,7 +35,7 @@ export default function TopDownCanvas(props: Props) {
     hoverCell, ghostCell, onMouseDown, onMouseMove, onMouseUp, onMouseLeave
   } = useCanvasInteraction({
     room, tool, selectedTemplateId, furnitureRotation, doorRotation,
-    onCellChange, onPlaceFurniture, onSelectFurniture, onMoveFurniture, onRotateCell, onInteractionStart
+    onCellChange, onPlaceFurniture, onSelectFurniture, onMoveFurniture, onInteractionStart
   })
 
   const canvasWidth = room.width * CELL_SIZE
@@ -218,19 +215,6 @@ export default function TopDownCanvas(props: Props) {
       ctx.fillRect(hoverCell.col * CELL_SIZE, hoverCell.row * CELL_SIZE, CELL_SIZE, CELL_SIZE)
     }
   }, [room, hoverCell, ghostCell, tool, selectedTemplateId, furnitureRotation, doorRotation, selectedInstanceId, canvasWidth, canvasHeight, blueprintMode])
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedInstanceId) onKeyDelete?.()
-      }
-      if (e.key === 'r' || e.key === 'R') {
-        onRotate?.()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedInstanceId, onKeyDelete, onRotate])
 
   return (
     <canvas
