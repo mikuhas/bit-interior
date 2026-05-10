@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, memo } from 'react'
 import { ViewMode, EditTool, BitSettings } from '../../types'
 import { PDFSettingsModal } from './PDFSettingsModal'
+import styles from './Toolbar.module.css'
 
 interface Props {
   viewMode: ViewMode
@@ -122,6 +123,7 @@ function WindowEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: E
     </div>
   )
 }
+
 const EDGE_MAP: Record<string, EditTool> = {
   'top': 'wallTop',
   'right': 'wallRight',
@@ -172,19 +174,15 @@ function WallEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: Edi
     let next: string[] = []
     
     if (selectedEdges.includes(edge)) {
-      // すでに選択されている場合は解除
       next = selectedEdges.filter(e => e !== edge)
     } else {
-      // 平行な辺がすでに選ばれているかチェック
       const isParallel = (e1: string, e2: string) => 
         (e1 === 'top' && e2 === 'bottom') || (e1 === 'bottom' && e2 === 'top') ||
         (e1 === 'left' && e2 === 'right') || (e1 === 'right' && e2 === 'left')
 
       if (selectedEdges.length === 1 && isParallel(selectedEdges[0], edge)) {
-        // 平行な辺が選ばれたら、古い方を捨てて新しい方だけにする
         next = [edge]
       } else {
-        // それ以外は最大2辺まで保持
         next = [...selectedEdges, edge].slice(-2)
       }
     }
@@ -239,10 +237,8 @@ function WallEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: Edi
       <div style={{ fontSize: 6, color: '#cc88ff', marginBottom: 20, pointerEvents: 'none', opacity: 0.7 }}>DRAG TO MOVE</div>
       
       <div style={{ position: 'relative', width: 100, height: 100, margin: '0 auto 24px' }}>
-        {/* 四角形のガイド */}
         <div style={{ position: 'absolute', left: 20, top: 20, width: 60, height: 60, border: '2px dashed #3a3a5a', borderRadius: '4px' }} />
         
-        {/* 各辺ボタン (ヒットエリアを拡大) */}
         <div className="edge-btn" title="Top"    style={btnStyle('top',    { left: 20, top: 5,  width: 60, height: 10 })} onClick={() => toggleEdge('top')}></div>
         <div className="edge-btn" title="Bottom" style={btnStyle('bottom', { left: 20, top: 85, width: 60, height: 10 })} onClick={() => toggleEdge('bottom')}></div>
         <div className="edge-btn" title="Left"   style={btnStyle('left',   { left: 5,  top: 20, width: 10, height: 60 })} onClick={() => toggleEdge('left')}><div style={{ transform: 'rotate(-90deg)' }}></div></div>
@@ -259,9 +255,6 @@ function WallEdgeSelector({ currentTool, onSelect, onClose }: { currentTool: Edi
     </div>
   )
 }
-
-const MemoizedToolbar = memo(Toolbar)
-export default MemoizedToolbar;
 
 function Toolbar({
   viewMode,
@@ -296,100 +289,55 @@ function Toolbar({
   const ROTATION_LABELS = ['0°', '90°', '180°', '270°']
 
   return (
-    <div
-      style={{
-        background: '#16162a',
-        borderBottom: '3px solid #4a4e69',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '6px 12px',
-        height: 48,
-        flexShrink: 0,
-        overflow: 'hidden',
-      }}
-    >
-      {/* ロゴ */}
-      <div
-        style={{
-          fontSize: 10,
-          color: '#e43f5a',
-          letterSpacing: 2,
-          marginRight: 8,
-          flexShrink: 0,
-          lineHeight: 1,
-        }}
-      >
-        <span style={{ color: '#e43f5a' }}>BIT</span>
-        <span style={{ color: '#ffcc00', marginLeft: 6 }}>INT</span>
-      </div>
+    <div className={styles.toolbar}>
+      <div className={styles.logo}>BIT <span style={{ color: '#ffcc00' }}>INT</span></div>
 
       <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
 
-      {/* ビュー切り替え */}
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
         <button
           className={`pixel-btn ${viewMode === 'topdown' ? 'view-active' : ''}`}
           onClick={() => setViewMode('topdown')}
-          title="BEVビュー"
         >
           BEV
         </button>
         <button
           className={`pixel-btn ${viewMode === 'isometric' ? 'view-active' : ''}`}
           onClick={() => setViewMode('isometric')}
-          title="アイソメトリックビュー"
         >
           ISO
         </button>
         <button
           className={`pixel-btn ${viewMode === 'blueprint' ? 'view-active' : ''}`}
           onClick={() => setViewMode('blueprint')}
-          title="図面モード"
         >
           PLAN
         </button>
       </div>
 
-      {/* 編集ツール (BEV・図面モード) */}
       {(viewMode === 'topdown' || viewMode === 'blueprint') && (
         <>
           <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
           <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-            {/* FLOOR */}
             <button
               className={`pixel-btn ${tool === 'floor' ? 'active' : ''}`}
               onClick={() => setTool('floor')}
             >FLOOR</button>
 
-            {/* WALL */}
             <button
               className={`pixel-btn ${isWallActive ? 'active' : ''}`}
               onClick={() => setShowWallPicker(true)}
-            >
-              WALL
-            </button>
+            >WALL</button>
             {showWallPicker && (
-              <WallEdgeSelector 
-                currentTool={tool} 
-                onSelect={setTool} 
-                onClose={() => setShowWallPicker(false)} 
-              />
+              <WallEdgeSelector currentTool={tool} onSelect={setTool} onClose={() => setShowWallPicker(false)} />
             )}
 
-            {/* WINDOW */}
             <button
               className={`pixel-btn ${isWindowActive ? 'active' : ''}`}
               onClick={() => setShowWindowPicker(true)}
-            >
-              WIN
-            </button>
+            >WIN</button>
             {showWindowPicker && (
-              <WindowEdgeSelector 
-                currentTool={tool} 
-                onSelect={setTool} 
-                onClose={() => setShowWindowPicker(false)} 
-              />
+              <WindowEdgeSelector currentTool={tool} onSelect={setTool} onClose={() => setShowWindowPicker(false)} />
             )}
 
             {BASE_TOOLS.slice(1).map(t => (
@@ -407,9 +355,8 @@ function Toolbar({
             <>
               <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
               <button
-                className="pixel-btn tooltip"
+                className="pixel-btn"
                 onClick={onRotate}
-                data-tip="R key"
                 style={{ color: '#ffcc00', borderColor: '#ffcc00' }}
               >
                 ↻ {ROTATION_LABELS[tool === 'door' ? doorRotation : furnitureRotation]}
@@ -421,9 +368,8 @@ function Toolbar({
             <>
               <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
               <button
-                className="pixel-btn danger"
+                className="pixel-btn"
                 onClick={onDeleteSelected}
-                title="Delete key"
               >
                 ✕ DELETE
               </button>
@@ -434,132 +380,42 @@ function Toolbar({
 
       <div style={{ flex: 1 }} />
 
-      {/* 保存・読込ボタン */}
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-        <button
-          className="pixel-btn"
-          onClick={onSave}
-          title="ローカルに保存"
-          style={{ color: '#00ff88', borderColor: '#00aa55' }}
-        >
-          SAVE
-        </button>
-        {hasSave && (
-          <button
-            className="pixel-btn"
-            onClick={onLoad}
-            title="保存データを読み込む"
-            style={{ color: '#88aaff', borderColor: '#4466aa' }}
-          >
-            LOAD
-          </button>
-        )}
-        <button
-          className="pixel-btn"
-          onClick={() => setShowPDFModal(true)}
-          title="PDFとして図面を出力"
-          style={{ color: '#ffcc00', borderColor: '#aa8800' }}
-        >
-          PDF
-        </button>
-        {showPDFModal && (
-          <PDFSettingsModal 
-            room={room}
-            bitSettings={bitSettings}
-            onClose={() => setShowPDFModal(false)} 
-          />
-        )}
-        <button
-          className="pixel-btn"
-          onClick={onExport}
-          title="JSONとしてダウンロード"
-          style={{ color: '#ffcc00', borderColor: '#aa8800' }}
-        >
-          ↓JSON
-        </button>
-        <button
-          className="pixel-btn"
-          onClick={() => fileInputRef.current?.click()}
-          title="JSONファイルを読み込む"
-          style={{ color: '#ffcc00', borderColor: '#aa8800' }}
-        >
-          ↑JSON
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          style={{ display: 'none' }}
-          onChange={e => {
-            const file = e.target.files?.[0]
-            if (file) {
-              onImport(file)
-              e.target.value = ''
-            }
-          }}
-        />
+        <button className="pixel-btn" onClick={onSave} style={{ color: '#00ff88', borderColor: '#00aa55' }}>SAVE</button>
+        {hasSave && <button className="pixel-btn" onClick={onLoad} style={{ color: '#88aaff', borderColor: '#4466aa' }}>LOAD</button>}
+        <button className="pixel-btn" onClick={() => setShowPDFModal(true)} style={{ color: '#ffcc00', borderColor: '#aa8800' }}>PDF</button>
+        {showPDFModal && <PDFSettingsModal room={room} bitSettings={bitSettings} onClose={() => setShowPDFModal(false)} />}
+        <button className="pixel-btn" onClick={onExport} style={{ color: '#ffcc00', borderColor: '#aa8800' }}>↓JSON</button>
+        <button className="pixel-btn" onClick={() => fileInputRef.current?.click()} style={{ color: '#ffcc00', borderColor: '#aa8800' }}>↑JSON</button>
+        <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={e => { const file = e.target.files?.[0]; if (file) { onImport(file); e.target.value = '' } }} />
       </div>
 
       <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
 
-      {/* Dark/Light トグル */}
-      <button
-        className="pixel-btn"
-        onClick={onToggleDarkMode}
-        title="Dark/Light切替"
-        style={{ color: darkMode ? '#ffcc44' : '#4488ff', borderColor: darkMode ? '#aa8800' : '#2255aa' }}
-      >
+      <button className="pixel-btn" onClick={onToggleDarkMode} style={{ color: darkMode ? '#ffcc44' : '#4488ff', borderColor: darkMode ? '#aa8800' : '#2255aa' }}>
         {darkMode ? 'DARK' : 'LIGHT'}
       </button>
 
       <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
 
-      {/* ビット設定 */}
-      <button
-        className="pixel-btn"
-        onClick={onOpenSettings}
-        title="ビット設定を変更"
-        style={{ color: '#cc88ff', borderColor: '#7744aa' }}
-      >
-        ⚙ BIT
-      </button>
+      <button className="pixel-btn" onClick={onOpenSettings} style={{ color: '#cc88ff', borderColor: '#7744aa' }}>⚙ BIT</button>
 
       <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
 
-      {/* ショートカットヘルプ */}
-      <button
-        className="pixel-btn"
-        onClick={onToggleHelp}
-        title="Shortcut list (? key)"
-        style={{ color: '#88ccff', borderColor: '#446688' }}
-      >
-        ?
-      </button>
+      <button className="pixel-btn" onClick={onToggleHelp} style={{ color: '#88ccff', borderColor: '#446688' }}>?</button>
 
       <div style={{ width: 2, height: 28, background: '#4a4e69', flexShrink: 0 }} />
 
-      {/* ステータス */}
-      <div
-        style={{
-          fontSize: 8,
-          color: '#7878aa',
-          flexShrink: 0,
-          display: 'flex',
-          gap: 12,
-          alignItems: 'center',
-        }}
-      >
-        <span style={{ color: '#e0e0ff' }}>
-          1bit = <span style={{ color: '#ffcc00' }}>{bitSettings.size}{bitSettings.unit}</span>
-        </span>
+      <div className={styles.statusBar}>
+        <span style={{ color: '#e0e0ff' }}>1bit = <span style={{ color: '#ffcc00' }}>{bitSettings.size}{bitSettings.unit}</span></span>
         <span style={{ color: '#4a4e69' }}>|</span>
         <span style={{ color: '#e0e0ff' }}>
-          <span style={{ color: '#00ff88' }}>{roomSize.width}</span>
-          <span style={{ color: '#4a4e69' }}>×</span>
-          <span style={{ color: '#00ff88' }}>{roomSize.height}</span>
+          <span style={{ color: '#00ff88' }}>{roomSize.width}</span>×<span style={{ color: '#00ff88' }}>{roomSize.height}</span>
           <span style={{ color: '#7878aa' }}> bit</span>
         </span>
       </div>
     </div>
   )
 }
+
+export default memo(Toolbar)

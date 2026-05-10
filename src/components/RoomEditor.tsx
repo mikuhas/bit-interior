@@ -14,6 +14,7 @@ import TopDownCanvas from './canvas/TopDownCanvas'
 import IsometricView from './canvas/IsometricView'
 import ShortcutHelp from './ui/ShortcutHelp'
 import RoomSettingsPanel from './ui/RoomSettingsPanel'
+import styles from './RoomEditor.module.css'
 
 interface Props {
   bitSettings: BitSettings
@@ -64,7 +65,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
   useKeyboardShortcuts(shortcutActions)
 
   const rotateCell = useCallback((row: number, col: number) => {
-    updateCell(row, col, 'floor') // simplify call for now
+    updateCell(row, col, 'floor')
   }, [updateCell])
 
   const handleRotate = useCallback(() => {
@@ -101,7 +102,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
   }, [room.width, room.height, onBitSettingsChange, updateRoomAppearance, resizeRoom, setShowSettings])
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: darkMode ? '#0f0f23' : '#c8d4e4', overflow: 'hidden' }}>
+    <div className={`${styles.editorContainer} ${darkMode ? styles.editorDark : styles.editorLight}`}>
       <Toolbar
         viewMode={viewMode} setViewMode={setViewMode}
         tool={tool} setTool={handleSetTool}
@@ -143,7 +144,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div className={styles.mainLayout}>
         {(viewMode === 'topdown' || viewMode === 'blueprint') && (
           <FurniturePanel
             selectedTemplateId={selectedTemplateId}
@@ -158,12 +159,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
           />
         )}
 
-        <div style={{
-          flex: 1, overflow: 'auto', display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: viewMode === 'isometric' ? 'center' : 'flex-start',
-          padding: 16, background: darkMode ? '#080912' : '#b8c8dc',
-        }}>
+        <div className={`${styles.canvasArea} ${viewMode === 'isometric' ? styles.canvasAreaIsometric : styles.canvasAreaTopDown}`}>
           {viewMode === 'isometric' ? (
             <IsometricView room={room} darkMode={darkMode} />
           ) : (
@@ -184,7 +180,7 @@ export default function RoomEditor({ bitSettings, onBitSettingsChange, initialWi
         </div>
       </div>
 
-      <div className="status-bar">
+      <div className={styles.statusBar}>
         <span>MODE: <span style={{ color: '#ffcc00' }}>{viewMode === 'topdown' ? 'TOP DOWN' : viewMode === 'isometric' ? 'ISOMETRIC' : 'BLUEPRINT'}</span></span>
         {(viewMode === 'topdown' || viewMode === 'blueprint') && (
           <>

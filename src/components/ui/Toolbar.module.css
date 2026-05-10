@@ -1,0 +1,31 @@
+.toolbar {
+  background: #16162a;
+  border-bottom: 3px solid #4a4e69;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  height: 48px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.logo {
+  font-size: 10px;
+  color: #e43f5a;
+  margin-right: 8px;
+}
+
+.toolGroup {
+  display: flex;
+  gap: 4px;
+}
+
+.statusBar {
+  font-size: 8px;
+  color: #7878aa;
+  flex-shrink: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}

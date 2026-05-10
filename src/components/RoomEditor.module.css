@@ -1,0 +1,49 @@
+.editorContainer {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editorDark {
+  background: #0f0f23;
+}
+
+.editorLight {
+  background: #c8d4e4;
+}
+
+.mainLayout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.canvasArea {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+}
+
+.canvasAreaIsometric {
+  justify-content: center;
+}
+
+.canvasAreaTopDown {
+  justify-content: flex-start;
+}
+
+.statusBar {
+  height: 32px;
+  background: #16162a;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 8px;
+  color: #7878aa;
+  gap: 12px;
+  border-top: 2px solid #4a4e69;
+}
